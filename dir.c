@@ -9,7 +9,7 @@
  *  Updated to filesystem version 3 by Daniel Aragones
  */
 
-#include "xinix.h"
+#include "obfs.h"
 #include <linux/buffer_head.h>
 #include <linux/highmem.h>
 #include <linux/swap.h>

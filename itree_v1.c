@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 #include <linux/buffer_head.h>
 #include <linux/slab.h>
-#include "xinix.h"
+#include "obfs.h"
 
 enum {DEPTH = 3, DIRECT = 7};	/* Only double indirect */
 

@@ -5,7 +5,7 @@
  *  Copyright (C) 1991, 1992  Linus Torvalds
  */
 
-#include "xinix.h"
+#include "obfs.h"
 
 static int add_nondir(struct dentry *dentry, struct inode *inode)
 {

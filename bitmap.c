@@ -12,7 +12,7 @@
 
 /* bitmap.c contains the code that handles the inode and block bitmaps */
 
-#include "xinix.h"
+#include "obfs.h"
 #include <linux/buffer_head.h>
 #include <linux/bitops.h>
 #include <linux/sched.h>

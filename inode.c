@@ -11,7 +11,7 @@
  */
 
 #include <linux/module.h>
-#include "xinix.h"
+#include "obfs.h"
 #include <linux/buffer_head.h>
 #include <linux/slab.h>
 #include <linux/init.h>

@@ -4,7 +4,7 @@
 
 #include <linux/fs.h>
 #include <linux/pagemap.h>
-#include "xinix_fs.h"
+#include "obfs_fs.h"
 
 #define INODE_VERSION(inode)	xinix_sb(inode->i_sb)->s_version
 #define MINIX_V1		0x0001		/* original xinix fs */

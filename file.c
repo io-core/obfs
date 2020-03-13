@@ -7,7 +7,7 @@
  *  xinix regular file handling primitives
  */
 
-#include "xinix.h"
+#include "obfs.h"
 
 /*
  * We have mostly NULLs here: the current defaults are OK for
