@@ -3,6 +3,9 @@
  *  linux/fs/obfs/namei.c
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
+ *
+ *  Copyright (C) 2020  Charles Perkins
+ *      Project Oberon fs support.
  */
 
 #include "obfs.h"

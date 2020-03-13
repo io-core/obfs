@@ -7,6 +7,9 @@
  *  obfs directory handling functions
  *
  *  Updated to filesystem version 3 by Daniel Aragones
+ *
+ *  Copyright (C) 2020  Charles Perkins
+ *      Project Oberon fs support.
  */
 
 #include "obfs.h"

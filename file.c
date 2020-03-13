@@ -5,6 +5,9 @@
  *  Copyright (C) 1991, 1992 Linus Torvalds
  *
  *  obfs regular file handling primitives
+ *
+ *  Copyright (C) 2020  Charles Perkins
+ *      Project Oberon fs support.
  */
 
 #include "obfs.h"

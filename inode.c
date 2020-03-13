@@ -8,6 +8,9 @@
  *
  *  Modified for 680x0 by Andreas Schwab
  *  Updated to filesystem version 3 by Daniel Aragones
+ *
+ *  Copyright (C) 2020  Charles Perkins
+ *      Project Oberon fs support.
  */
 
 #include <linux/module.h>
