@@ -46,8 +46,8 @@ static void obfs_put_super(struct super_block *sb)
 	struct obfs_sb_info *sbi = obfs_sb(sb);
 
 	if (!sb_rdonly(sb)) {
-		if (sbi->s_version != OBFS_V3)	 /* s_state is now out from V3 sb */
-			sbi->s_ms->s_state = sbi->s_mount_state;
+//		if (sbi->s_version != OBFS_V3)	 /* s_state is now out from V3 sb */
+//			sbi->s_ms->s_state = sbi->s_mount_state;
 		mark_buffer_dirty(sbi->s_sbh);
 	}
 	for (i = 0; i < sbi->s_imap_blocks; i++)
