@@ -18,7 +18,7 @@ static inline block_t cpu_to_block(unsigned long n)
 
 static inline block_t *i_data(struct inode *inode)
 {
-	return (block_t *)xinix_i(inode)->u.i2_data;
+	return (block_t *)obfs_i(inode)->u.i2_data;
 }
 
 #define DIRCOUNT 7
@@ -33,7 +33,7 @@ static int block_to_path(struct inode * inode, long block, int offsets[DEPTH])
 		printk("MINIX-fs: block_to_path: block %ld < 0 on dev %pg\n",
 			block, sb->s_bdev);
 	} else if ((u64)block * (u64)sb->s_blocksize >=
-			xinix_sb(sb)->s_max_size) {
+			obfs_sb(sb)->s_max_size) {
 		if (printk_ratelimit())
 			printk("MINIX-fs: block_to_path: "
 			       "block %ld too big on dev %pg\n",
@@ -59,18 +59,18 @@ static int block_to_path(struct inode * inode, long block, int offsets[DEPTH])
 
 #include "itree_common.c"
 
-int V2_xinix_get_block(struct inode * inode, long block,
+int V2_obfs_get_block(struct inode * inode, long block,
 			struct buffer_head *bh_result, int create)
 {
 	return get_block(inode, block, bh_result, create);
 }
 
-void V2_xinix_truncate(struct inode * inode)
+void V2_obfs_truncate(struct inode * inode)
 {
 	truncate(inode);
 }
 
-unsigned V2_xinix_blocks(loff_t size, struct super_block *sb)
+unsigned V2_obfs_blocks(loff_t size, struct super_block *sb)
 {
 	return nblocks(size, sb);
 }

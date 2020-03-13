@@ -1,5 +1,5 @@
 /*
- *  linux/fs/xinix/inode.c
+ *  linux/fs/obfs/inode.c
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
  *
@@ -19,28 +19,28 @@
 #include <linux/vfs.h>
 #include <linux/writeback.h>
 
-static int xinix_write_inode(struct inode *inode,
+static int obfs_write_inode(struct inode *inode,
 		struct writeback_control *wbc);
-static int xinix_statfs(struct dentry *dentry, struct kstatfs *buf);
-static int xinix_remount (struct super_block * sb, int * flags, char * data);
+static int obfs_statfs(struct dentry *dentry, struct kstatfs *buf);
+static int obfs_remount (struct super_block * sb, int * flags, char * data);
 
-static void xinix_evict_inode(struct inode *inode)
+static void obfs_evict_inode(struct inode *inode)
 {
 	truncate_inode_pages_final(&inode->i_data);
 	if (!inode->i_nlink) {
 		inode->i_size = 0;
-		xinix_truncate(inode);
+		obfs_truncate(inode);
 	}
 	invalidate_inode_buffers(inode);
 	clear_inode(inode);
 	if (!inode->i_nlink)
-		xinix_free_inode(inode);
+		obfs_free_inode(inode);
 }
 
-static void xinix_put_super(struct super_block *sb)
+static void obfs_put_super(struct super_block *sb)
 {
 	int i;
-	struct xinix_sb_info *sbi = xinix_sb(sb);
+	struct obfs_sb_info *sbi = obfs_sb(sb);
 
 	if (!sb_rdonly(sb)) {
 		if (sbi->s_version != MINIX_V3)	 /* s_state is now out from V3 sb */
@@ -57,43 +57,43 @@ static void xinix_put_super(struct super_block *sb)
 	kfree(sbi);
 }
 
-static struct kmem_cache * xinix_inode_cachep;
+static struct kmem_cache * obfs_inode_cachep;
 
-static struct inode *xinix_alloc_inode(struct super_block *sb)
+static struct inode *obfs_alloc_inode(struct super_block *sb)
 {
-	struct xinix_inode_info *ei;
-	ei = kmem_cache_alloc(xinix_inode_cachep, GFP_KERNEL);
+	struct obfs_inode_info *ei;
+	ei = kmem_cache_alloc(obfs_inode_cachep, GFP_KERNEL);
 	if (!ei)
 		return NULL;
 	return &ei->vfs_inode;
 }
 
-static void xinix_i_callback(struct rcu_head *head)
+static void obfs_i_callback(struct rcu_head *head)
 {
 	struct inode *inode = container_of(head, struct inode, i_rcu);
-	kmem_cache_free(xinix_inode_cachep, xinix_i(inode));
+	kmem_cache_free(obfs_inode_cachep, obfs_i(inode));
 }
 
-static void xinix_destroy_inode(struct inode *inode)
+static void obfs_destroy_inode(struct inode *inode)
 {
-	call_rcu(&inode->i_rcu, xinix_i_callback);
+	call_rcu(&inode->i_rcu, obfs_i_callback);
 }
 
 static void init_once(void *foo)
 {
-	struct xinix_inode_info *ei = (struct xinix_inode_info *) foo;
+	struct obfs_inode_info *ei = (struct obfs_inode_info *) foo;
 
 	inode_init_once(&ei->vfs_inode);
 }
 
 static int __init init_inodecache(void)
 {
-	xinix_inode_cachep = kmem_cache_create("xinix_inode_cache",
-					     sizeof(struct xinix_inode_info),
+	obfs_inode_cachep = kmem_cache_create("obfs_inode_cache",
+					     sizeof(struct obfs_inode_info),
 					     0, (SLAB_RECLAIM_ACCOUNT|
 						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
 					     init_once);
-	if (xinix_inode_cachep == NULL)
+	if (obfs_inode_cachep == NULL)
 		return -ENOMEM;
 	return 0;
 }
@@ -105,23 +105,23 @@ static void destroy_inodecache(void)
 	 * destroy cache.
 	 */
 	rcu_barrier();
-	kmem_cache_destroy(xinix_inode_cachep);
+	kmem_cache_destroy(obfs_inode_cachep);
 }
 
-static const struct super_operations xinix_sops = {
-	.alloc_inode	= xinix_alloc_inode,
-	.destroy_inode	= xinix_destroy_inode,
-	.write_inode	= xinix_write_inode,
-	.evict_inode	= xinix_evict_inode,
-	.put_super	= xinix_put_super,
-	.statfs		= xinix_statfs,
-	.remount_fs	= xinix_remount,
+static const struct super_operations obfs_sops = {
+	.alloc_inode	= obfs_alloc_inode,
+	.destroy_inode	= obfs_destroy_inode,
+	.write_inode	= obfs_write_inode,
+	.evict_inode	= obfs_evict_inode,
+	.put_super	= obfs_put_super,
+	.statfs		= obfs_statfs,
+	.remount_fs	= obfs_remount,
 };
 
-static int xinix_remount (struct super_block * sb, int * flags, char * data)
+static int obfs_remount (struct super_block * sb, int * flags, char * data)
 {
-	struct xinix_sb_info * sbi = xinix_sb(sb);
-	struct xinix_super_block * ms;
+	struct obfs_sb_info * sbi = obfs_sb(sb);
+	struct obfs_super_block * ms;
 
 	sync_filesystem(sb);
 	ms = sbi->s_ms;
@@ -155,24 +155,24 @@ static int xinix_remount (struct super_block * sb, int * flags, char * data)
 	return 0;
 }
 
-static int xinix_fill_super(struct super_block *s, void *data, int silent)
+static int obfs_fill_super(struct super_block *s, void *data, int silent)
 {
 	struct buffer_head *bh;
 	struct buffer_head **map;
-	struct xinix_super_block *ms;
-	struct xinix3_super_block *m3s = NULL;
+	struct obfs_super_block *ms;
+	struct obfs3_super_block *m3s = NULL;
 	unsigned long i, block;
 	struct inode *root_inode;
-	struct xinix_sb_info *sbi;
+	struct obfs_sb_info *sbi;
 	int ret = -EINVAL;
 
-	sbi = kzalloc(sizeof(struct xinix_sb_info), GFP_KERNEL);
+	sbi = kzalloc(sizeof(struct obfs_sb_info), GFP_KERNEL);
 	if (!sbi)
 		return -ENOMEM;
 	s->s_fs_info = sbi;
 
-	BUILD_BUG_ON(32 != sizeof (struct xinix_inode));
-	BUILD_BUG_ON(64 != sizeof(struct xinix2_inode));
+	BUILD_BUG_ON(32 != sizeof (struct obfs_inode));
+	BUILD_BUG_ON(64 != sizeof(struct obfs2_inode));
 
 	if (!sb_set_blocksize(s, BLOCK_SIZE))
 		goto out_bad_hblock;
@@ -180,7 +180,7 @@ static int xinix_fill_super(struct super_block *s, void *data, int silent)
 	if (!(bh = sb_bread(s, 1)))
 		goto out_bad_sb;
 
-	ms = (struct xinix_super_block *) bh->b_data;
+	ms = (struct obfs_super_block *) bh->b_data;
 	sbi->s_ms = ms;
 	sbi->s_sbh = bh;
 	sbi->s_mount_state = ms->s_state;
@@ -215,7 +215,7 @@ static int xinix_fill_super(struct super_block *s, void *data, int silent)
 		sbi->s_namelen = 30;
 		s->s_max_links = MINIX2_LINK_MAX;
 	} else if ( *(__u16 *)(bh->b_data + 24) == MINIX3_SUPER_MAGIC) {
-		m3s = (struct xinix3_super_block *) bh->b_data;
+		m3s = (struct obfs3_super_block *) bh->b_data;
 		s->s_magic = m3s->s_magic;
 		sbi->s_imap_blocks = m3s->s_imap_blocks;
 		sbi->s_zmap_blocks = m3s->s_zmap_blocks;
@@ -257,21 +257,21 @@ static int xinix_fill_super(struct super_block *s, void *data, int silent)
 		block++;
 	}
 
-	xinix_set_bit(0,sbi->s_imap[0]->b_data);
-	xinix_set_bit(0,sbi->s_zmap[0]->b_data);
+	obfs_set_bit(0,sbi->s_imap[0]->b_data);
+	obfs_set_bit(0,sbi->s_zmap[0]->b_data);
 
-	/* Apparently xinix can create filesystems that allocate more blocks for
+	/* Apparently obfs can create filesystems that allocate more blocks for
 	 * the bitmaps than needed.  We simply ignore that, but verify it didn't
 	 * create one with not enough blocks and bail out if so.
 	 */
-	block = xinix_blocks_needed(sbi->s_ninodes, s->s_blocksize);
+	block = obfs_blocks_needed(sbi->s_ninodes, s->s_blocksize);
 	if (sbi->s_imap_blocks < block) {
 		printk("MINIX-fs: file system does not have enough "
 				"imap blocks allocated.  Refusing to mount.\n");
 		goto out_no_bitmap;
 	}
 
-	block = xinix_blocks_needed(
+	block = obfs_blocks_needed(
 			(sbi->s_nzones - sbi->s_firstdatazone + 1),
 			s->s_blocksize);
 	if (sbi->s_zmap_blocks < block) {
@@ -281,8 +281,8 @@ static int xinix_fill_super(struct super_block *s, void *data, int silent)
 	}
 
 	/* set up enough so that it can read an inode */
-	s->s_op = &xinix_sops;
-	root_inode = xinix_iget(s, MINIX_ROOT_INO);
+	s->s_op = &obfs_sops;
+	root_inode = obfs_iget(s, MINIX_ROOT_INO);
 	if (IS_ERR(root_inode)) {
 		ret = PTR_ERR(root_inode);
 		goto out_no_root;
@@ -353,18 +353,18 @@ out:
 	return ret;
 }
 
-static int xinix_statfs(struct dentry *dentry, struct kstatfs *buf)
+static int obfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 {
 	struct super_block *sb = dentry->d_sb;
-	struct xinix_sb_info *sbi = xinix_sb(sb);
+	struct obfs_sb_info *sbi = obfs_sb(sb);
 	u64 id = huge_encode_dev(sb->s_bdev->bd_dev);
 	buf->f_type = sb->s_magic;
 	buf->f_bsize = sb->s_blocksize;
 	buf->f_blocks = (sbi->s_nzones - sbi->s_firstdatazone) << sbi->s_log_zone_size;
-	buf->f_bfree = xinix_count_free_blocks(sb);
+	buf->f_bfree = obfs_count_free_blocks(sb);
 	buf->f_bavail = buf->f_bfree;
 	buf->f_files = sbi->s_ninodes;
-	buf->f_ffree = xinix_count_free_inodes(sb);
+	buf->f_ffree = obfs_count_free_inodes(sb);
 	buf->f_namelen = sbi->s_namelen;
 	buf->f_fsid.val[0] = (u32)id;
 	buf->f_fsid.val[1] = (u32)(id >> 32);
@@ -372,101 +372,101 @@ static int xinix_statfs(struct dentry *dentry, struct kstatfs *buf)
 	return 0;
 }
 
-static int xinix_get_block(struct inode *inode, sector_t block,
+static int obfs_get_block(struct inode *inode, sector_t block,
 		    struct buffer_head *bh_result, int create)
 {
 	if (INODE_VERSION(inode) == MINIX_V1)
-		return V1_xinix_get_block(inode, block, bh_result, create);
+		return V1_obfs_get_block(inode, block, bh_result, create);
 	else
-		return V2_xinix_get_block(inode, block, bh_result, create);
+		return V2_obfs_get_block(inode, block, bh_result, create);
 }
 
-static int xinix_writepage(struct page *page, struct writeback_control *wbc)
+static int obfs_writepage(struct page *page, struct writeback_control *wbc)
 {
-	return block_write_full_page(page, xinix_get_block, wbc);
+	return block_write_full_page(page, obfs_get_block, wbc);
 }
 
-static int xinix_readpage(struct file *file, struct page *page)
+static int obfs_readpage(struct file *file, struct page *page)
 {
-	return block_read_full_page(page,xinix_get_block);
+	return block_read_full_page(page,obfs_get_block);
 }
 
-int xinix_prepare_chunk(struct page *page, loff_t pos, unsigned len)
+int obfs_prepare_chunk(struct page *page, loff_t pos, unsigned len)
 {
-	return __block_write_begin(page, pos, len, xinix_get_block);
+	return __block_write_begin(page, pos, len, obfs_get_block);
 }
 
-static void xinix_write_failed(struct address_space *mapping, loff_t to)
+static void obfs_write_failed(struct address_space *mapping, loff_t to)
 {
 	struct inode *inode = mapping->host;
 
 	if (to > inode->i_size) {
 		truncate_pagecache(inode, inode->i_size);
-		xinix_truncate(inode);
+		obfs_truncate(inode);
 	}
 }
 
-static int xinix_write_begin(struct file *file, struct address_space *mapping,
+static int obfs_write_begin(struct file *file, struct address_space *mapping,
 			loff_t pos, unsigned len, unsigned flags,
 			struct page **pagep, void **fsdata)
 {
 	int ret;
 
 	ret = block_write_begin(mapping, pos, len, flags, pagep,
-				xinix_get_block);
+				obfs_get_block);
 	if (unlikely(ret))
-		xinix_write_failed(mapping, pos + len);
+		obfs_write_failed(mapping, pos + len);
 
 	return ret;
 }
 
-static sector_t xinix_bmap(struct address_space *mapping, sector_t block)
+static sector_t obfs_bmap(struct address_space *mapping, sector_t block)
 {
-	return generic_block_bmap(mapping,block,xinix_get_block);
+	return generic_block_bmap(mapping,block,obfs_get_block);
 }
 
-static const struct address_space_operations xinix_aops = {
-	.readpage = xinix_readpage,
-	.writepage = xinix_writepage,
-	.write_begin = xinix_write_begin,
+static const struct address_space_operations obfs_aops = {
+	.readpage = obfs_readpage,
+	.writepage = obfs_writepage,
+	.write_begin = obfs_write_begin,
 	.write_end = generic_write_end,
-	.bmap = xinix_bmap
+	.bmap = obfs_bmap
 };
 
-static const struct inode_operations xinix_symlink_inode_operations = {
+static const struct inode_operations obfs_symlink_inode_operations = {
 	.get_link	= page_get_link,
-	.getattr	= xinix_getattr,
+	.getattr	= obfs_getattr,
 };
 
-void xinix_set_inode(struct inode *inode, dev_t rdev)
+void obfs_set_inode(struct inode *inode, dev_t rdev)
 {
 	if (S_ISREG(inode->i_mode)) {
-		inode->i_op = &xinix_file_inode_operations;
-		inode->i_fop = &xinix_file_operations;
-		inode->i_mapping->a_ops = &xinix_aops;
+		inode->i_op = &obfs_file_inode_operations;
+		inode->i_fop = &obfs_file_operations;
+		inode->i_mapping->a_ops = &obfs_aops;
 	} else if (S_ISDIR(inode->i_mode)) {
-		inode->i_op = &xinix_dir_inode_operations;
-		inode->i_fop = &xinix_dir_operations;
-		inode->i_mapping->a_ops = &xinix_aops;
+		inode->i_op = &obfs_dir_inode_operations;
+		inode->i_fop = &obfs_dir_operations;
+		inode->i_mapping->a_ops = &obfs_aops;
 	} else if (S_ISLNK(inode->i_mode)) {
-		inode->i_op = &xinix_symlink_inode_operations;
+		inode->i_op = &obfs_symlink_inode_operations;
 		inode_nohighmem(inode);
-		inode->i_mapping->a_ops = &xinix_aops;
+		inode->i_mapping->a_ops = &obfs_aops;
 	} else
 		init_special_inode(inode, inode->i_mode, rdev);
 }
 
 /*
- * The xinix V1 function to read an inode.
+ * The obfs V1 function to read an inode.
  */
-static struct inode *V1_xinix_iget(struct inode *inode)
+static struct inode *V1_obfs_iget(struct inode *inode)
 {
 	struct buffer_head * bh;
-	struct xinix_inode * raw_inode;
-	struct xinix_inode_info *xinix_inode = xinix_i(inode);
+	struct obfs_inode * raw_inode;
+	struct obfs_inode_info *obfs_inode = obfs_i(inode);
 	int i;
 
-	raw_inode = xinix_V1_raw_inode(inode->i_sb, inode->i_ino, &bh);
+	raw_inode = obfs_V1_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (!raw_inode) {
 		iget_failed(inode);
 		return ERR_PTR(-EIO);
@@ -482,24 +482,24 @@ static struct inode *V1_xinix_iget(struct inode *inode)
 	inode->i_ctime.tv_nsec = 0;
 	inode->i_blocks = 0;
 	for (i = 0; i < 9; i++)
-		xinix_inode->u.i1_data[i] = raw_inode->i_zone[i];
-	xinix_set_inode(inode, old_decode_dev(raw_inode->i_zone[0]));
+		obfs_inode->u.i1_data[i] = raw_inode->i_zone[i];
+	obfs_set_inode(inode, old_decode_dev(raw_inode->i_zone[0]));
 	brelse(bh);
 	unlock_new_inode(inode);
 	return inode;
 }
 
 /*
- * The xinix V2 function to read an inode.
+ * The obfs V2 function to read an inode.
  */
-static struct inode *V2_xinix_iget(struct inode *inode)
+static struct inode *V2_obfs_iget(struct inode *inode)
 {
 	struct buffer_head * bh;
-	struct xinix2_inode * raw_inode;
-	struct xinix_inode_info *xinix_inode = xinix_i(inode);
+	struct obfs2_inode * raw_inode;
+	struct obfs_inode_info *obfs_inode = obfs_i(inode);
 	int i;
 
-	raw_inode = xinix_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
+	raw_inode = obfs_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (!raw_inode) {
 		iget_failed(inode);
 		return ERR_PTR(-EIO);
@@ -517,8 +517,8 @@ static struct inode *V2_xinix_iget(struct inode *inode)
 	inode->i_ctime.tv_nsec = 0;
 	inode->i_blocks = 0;
 	for (i = 0; i < 10; i++)
-		xinix_inode->u.i2_data[i] = raw_inode->i_zone[i];
-	xinix_set_inode(inode, old_decode_dev(raw_inode->i_zone[0]));
+		obfs_inode->u.i2_data[i] = raw_inode->i_zone[i];
+	obfs_set_inode(inode, old_decode_dev(raw_inode->i_zone[0]));
 	brelse(bh);
 	unlock_new_inode(inode);
 	return inode;
@@ -527,7 +527,7 @@ static struct inode *V2_xinix_iget(struct inode *inode)
 /*
  * The global function to read an inode.
  */
-struct inode *xinix_iget(struct super_block *sb, unsigned long ino)
+struct inode *obfs_iget(struct super_block *sb, unsigned long ino)
 {
 	struct inode *inode;
 
@@ -538,22 +538,22 @@ struct inode *xinix_iget(struct super_block *sb, unsigned long ino)
 		return inode;
 
 	if (INODE_VERSION(inode) == MINIX_V1)
-		return V1_xinix_iget(inode);
+		return V1_obfs_iget(inode);
 	else
-		return V2_xinix_iget(inode);
+		return V2_obfs_iget(inode);
 }
 
 /*
- * The xinix V1 function to synchronize an inode.
+ * The obfs V1 function to synchronize an inode.
  */
-static struct buffer_head * V1_xinix_update_inode(struct inode * inode)
+static struct buffer_head * V1_obfs_update_inode(struct inode * inode)
 {
 	struct buffer_head * bh;
-	struct xinix_inode * raw_inode;
-	struct xinix_inode_info *xinix_inode = xinix_i(inode);
+	struct obfs_inode * raw_inode;
+	struct obfs_inode_info *obfs_inode = obfs_i(inode);
 	int i;
 
-	raw_inode = xinix_V1_raw_inode(inode->i_sb, inode->i_ino, &bh);
+	raw_inode = obfs_V1_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (!raw_inode)
 		return NULL;
 	raw_inode->i_mode = inode->i_mode;
@@ -565,22 +565,22 @@ static struct buffer_head * V1_xinix_update_inode(struct inode * inode)
 	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
 		raw_inode->i_zone[0] = old_encode_dev(inode->i_rdev);
 	else for (i = 0; i < 9; i++)
-		raw_inode->i_zone[i] = xinix_inode->u.i1_data[i];
+		raw_inode->i_zone[i] = obfs_inode->u.i1_data[i];
 	mark_buffer_dirty(bh);
 	return bh;
 }
 
 /*
- * The xinix V2 function to synchronize an inode.
+ * The obfs V2 function to synchronize an inode.
  */
-static struct buffer_head * V2_xinix_update_inode(struct inode * inode)
+static struct buffer_head * V2_obfs_update_inode(struct inode * inode)
 {
 	struct buffer_head * bh;
-	struct xinix2_inode * raw_inode;
-	struct xinix_inode_info *xinix_inode = xinix_i(inode);
+	struct obfs2_inode * raw_inode;
+	struct obfs_inode_info *obfs_inode = obfs_i(inode);
 	int i;
 
-	raw_inode = xinix_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
+	raw_inode = obfs_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (!raw_inode)
 		return NULL;
 	raw_inode->i_mode = inode->i_mode;
@@ -594,26 +594,26 @@ static struct buffer_head * V2_xinix_update_inode(struct inode * inode)
 	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
 		raw_inode->i_zone[0] = old_encode_dev(inode->i_rdev);
 	else for (i = 0; i < 10; i++)
-		raw_inode->i_zone[i] = xinix_inode->u.i2_data[i];
+		raw_inode->i_zone[i] = obfs_inode->u.i2_data[i];
 	mark_buffer_dirty(bh);
 	return bh;
 }
 
-static int xinix_write_inode(struct inode *inode, struct writeback_control *wbc)
+static int obfs_write_inode(struct inode *inode, struct writeback_control *wbc)
 {
 	int err = 0;
 	struct buffer_head *bh;
 
 	if (INODE_VERSION(inode) == MINIX_V1)
-		bh = V1_xinix_update_inode(inode);
+		bh = V1_obfs_update_inode(inode);
 	else
-		bh = V2_xinix_update_inode(inode);
+		bh = V2_obfs_update_inode(inode);
 	if (!bh)
 		return -EIO;
 	if (wbc->sync_mode == WB_SYNC_ALL && buffer_dirty(bh)) {
 		sync_dirty_buffer(bh);
 		if (buffer_req(bh) && !buffer_uptodate(bh)) {
-			printk("IO error syncing xinix inode [%s:%08lx]\n",
+			printk("IO error syncing obfs inode [%s:%08lx]\n",
 				inode->i_sb->s_id, inode->i_ino);
 			err = -EIO;
 		}
@@ -622,7 +622,7 @@ static int xinix_write_inode(struct inode *inode, struct writeback_control *wbc)
 	return err;
 }
 
-int xinix_getattr(const struct path *path, struct kstat *stat,
+int obfs_getattr(const struct path *path, struct kstat *stat,
 		  u32 request_mask, unsigned int flags)
 {
 	struct super_block *sb = path->dentry->d_sb;
@@ -630,9 +630,9 @@ int xinix_getattr(const struct path *path, struct kstat *stat,
 
 	generic_fillattr(inode, stat);
 	if (INODE_VERSION(inode) == MINIX_V1)
-		stat->blocks = (BLOCK_SIZE / 512) * V1_xinix_blocks(stat->size, sb);
+		stat->blocks = (BLOCK_SIZE / 512) * V1_obfs_blocks(stat->size, sb);
 	else
-		stat->blocks = (sb->s_blocksize / 512) * V2_xinix_blocks(stat->size, sb);
+		stat->blocks = (sb->s_blocksize / 512) * V2_obfs_blocks(stat->size, sb);
 	stat->blksize = sb->s_blocksize;
 	return 0;
 }
@@ -640,37 +640,37 @@ int xinix_getattr(const struct path *path, struct kstat *stat,
 /*
  * The function that is called for file truncation.
  */
-void xinix_truncate(struct inode * inode)
+void obfs_truncate(struct inode * inode)
 {
 	if (!(S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)))
 		return;
 	if (INODE_VERSION(inode) == MINIX_V1)
-		V1_xinix_truncate(inode);
+		V1_obfs_truncate(inode);
 	else
-		V2_xinix_truncate(inode);
+		V2_obfs_truncate(inode);
 }
 
-static struct dentry *xinix_mount(struct file_system_type *fs_type,
+static struct dentry *obfs_mount(struct file_system_type *fs_type,
 	int flags, const char *dev_name, void *data)
 {
-	return mount_bdev(fs_type, flags, dev_name, data, xinix_fill_super);
+	return mount_bdev(fs_type, flags, dev_name, data, obfs_fill_super);
 }
 
-static struct file_system_type xinix_fs_type = {
+static struct file_system_type obfs_fs_type = {
 	.owner		= THIS_MODULE,
-	.name		= "xinix",
-	.mount		= xinix_mount,
+	.name		= "obfs",
+	.mount		= obfs_mount,
 	.kill_sb	= kill_block_super,
 	.fs_flags	= FS_REQUIRES_DEV,
 };
-MODULE_ALIAS_FS("xinix");
+MODULE_ALIAS_FS("obfs");
 
-static int __init init_xinix_fs(void)
+static int __init init_obfs_fs(void)
 {
 	int err = init_inodecache();
 	if (err)
 		goto out1;
-	err = register_filesystem(&xinix_fs_type);
+	err = register_filesystem(&obfs_fs_type);
 	if (err)
 		goto out;
 	return 0;
@@ -680,14 +680,14 @@ out1:
 	return err;
 }
 
-static void __exit exit_xinix_fs(void)
+static void __exit exit_obfs_fs(void)
 {
-        unregister_filesystem(&xinix_fs_type);
+        unregister_filesystem(&obfs_fs_type);
 	destroy_inodecache();
 }
 
-module_init(init_xinix_fs)
-module_exit(exit_xinix_fs)
+module_init(init_obfs_fs)
+module_exit(exit_obfs_fs)
 MODULE_LICENSE("GPL");
 
 

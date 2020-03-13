@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- *  linux/fs/xinix/namei.c
+ *  linux/fs/obfs/namei.c
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
  */
@@ -9,7 +9,7 @@
 
 static int add_nondir(struct dentry *dentry, struct inode *inode)
 {
-	int err = xinix_add_link(dentry, inode);
+	int err = obfs_add_link(dentry, inode);
 	if (!err) {
 		d_instantiate(dentry, inode);
 		return 0;
@@ -19,21 +19,21 @@ static int add_nondir(struct dentry *dentry, struct inode *inode)
 	return err;
 }
 
-static struct dentry *xinix_lookup(struct inode * dir, struct dentry *dentry, unsigned int flags)
+static struct dentry *obfs_lookup(struct inode * dir, struct dentry *dentry, unsigned int flags)
 {
 	struct inode * inode = NULL;
 	ino_t ino;
 
-	if (dentry->d_name.len > xinix_sb(dir->i_sb)->s_namelen)
+	if (dentry->d_name.len > obfs_sb(dir->i_sb)->s_namelen)
 		return ERR_PTR(-ENAMETOOLONG);
 
-	ino = xinix_inode_by_name(dentry);
+	ino = obfs_inode_by_name(dentry);
 	if (ino)
-		inode = xinix_iget(dir->i_sb, ino);
+		inode = obfs_iget(dir->i_sb, ino);
 	return d_splice_alias(inode, dentry);
 }
 
-static int xinix_mknod(struct inode * dir, struct dentry *dentry, umode_t mode, dev_t rdev)
+static int obfs_mknod(struct inode * dir, struct dentry *dentry, umode_t mode, dev_t rdev)
 {
 	int error;
 	struct inode *inode;
@@ -41,35 +41,35 @@ static int xinix_mknod(struct inode * dir, struct dentry *dentry, umode_t mode, 
 	if (!old_valid_dev(rdev))
 		return -EINVAL;
 
-	inode = xinix_new_inode(dir, mode, &error);
+	inode = obfs_new_inode(dir, mode, &error);
 
 	if (inode) {
-		xinix_set_inode(inode, rdev);
+		obfs_set_inode(inode, rdev);
 		mark_inode_dirty(inode);
 		error = add_nondir(dentry, inode);
 	}
 	return error;
 }
 
-static int xinix_tmpfile(struct inode *dir, struct dentry *dentry, umode_t mode)
+static int obfs_tmpfile(struct inode *dir, struct dentry *dentry, umode_t mode)
 {
 	int error;
-	struct inode *inode = xinix_new_inode(dir, mode, &error);
+	struct inode *inode = obfs_new_inode(dir, mode, &error);
 	if (inode) {
-		xinix_set_inode(inode, 0);
+		obfs_set_inode(inode, 0);
 		mark_inode_dirty(inode);
 		d_tmpfile(dentry, inode);
 	}
 	return error;
 }
 
-static int xinix_create(struct inode *dir, struct dentry *dentry, umode_t mode,
+static int obfs_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 		bool excl)
 {
-	return xinix_mknod(dir, dentry, mode, 0);
+	return obfs_mknod(dir, dentry, mode, 0);
 }
 
-static int xinix_symlink(struct inode * dir, struct dentry *dentry,
+static int obfs_symlink(struct inode * dir, struct dentry *dentry,
 	  const char * symname)
 {
 	int err = -ENAMETOOLONG;
@@ -79,11 +79,11 @@ static int xinix_symlink(struct inode * dir, struct dentry *dentry,
 	if (i > dir->i_sb->s_blocksize)
 		goto out;
 
-	inode = xinix_new_inode(dir, S_IFLNK | 0777, &err);
+	inode = obfs_new_inode(dir, S_IFLNK | 0777, &err);
 	if (!inode)
 		goto out;
 
-	xinix_set_inode(inode, 0);
+	obfs_set_inode(inode, 0);
 	err = page_symlink(inode, symname, i);
 	if (err)
 		goto out_fail;
@@ -98,7 +98,7 @@ out_fail:
 	goto out;
 }
 
-static int xinix_link(struct dentry * old_dentry, struct inode * dir,
+static int obfs_link(struct dentry * old_dentry, struct inode * dir,
 	struct dentry *dentry)
 {
 	struct inode *inode = d_inode(old_dentry);
@@ -109,26 +109,26 @@ static int xinix_link(struct dentry * old_dentry, struct inode * dir,
 	return add_nondir(dentry, inode);
 }
 
-static int xinix_mkdir(struct inode * dir, struct dentry *dentry, umode_t mode)
+static int obfs_mkdir(struct inode * dir, struct dentry *dentry, umode_t mode)
 {
 	struct inode * inode;
 	int err;
 
 	inode_inc_link_count(dir);
 
-	inode = xinix_new_inode(dir, S_IFDIR | mode, &err);
+	inode = obfs_new_inode(dir, S_IFDIR | mode, &err);
 	if (!inode)
 		goto out_dir;
 
-	xinix_set_inode(inode, 0);
+	obfs_set_inode(inode, 0);
 
 	inode_inc_link_count(inode);
 
-	err = xinix_make_empty(inode, dir);
+	err = obfs_make_empty(inode, dir);
 	if (err)
 		goto out_fail;
 
-	err = xinix_add_link(dentry, inode);
+	err = obfs_add_link(dentry, inode);
 	if (err)
 		goto out_fail;
 
@@ -145,18 +145,18 @@ out_dir:
 	goto out;
 }
 
-static int xinix_unlink(struct inode * dir, struct dentry *dentry)
+static int obfs_unlink(struct inode * dir, struct dentry *dentry)
 {
 	int err = -ENOENT;
 	struct inode * inode = d_inode(dentry);
 	struct page * page;
-	struct xinix_dir_entry * de;
+	struct obfs_dir_entry * de;
 
-	de = xinix_find_entry(dentry, &page);
+	de = obfs_find_entry(dentry, &page);
 	if (!de)
 		goto end_unlink;
 
-	err = xinix_delete_entry(de, page);
+	err = obfs_delete_entry(de, page);
 	if (err)
 		goto end_unlink;
 
@@ -166,13 +166,13 @@ end_unlink:
 	return err;
 }
 
-static int xinix_rmdir(struct inode * dir, struct dentry *dentry)
+static int obfs_rmdir(struct inode * dir, struct dentry *dentry)
 {
 	struct inode * inode = d_inode(dentry);
 	int err = -ENOTEMPTY;
 
-	if (xinix_empty_dir(inode)) {
-		err = xinix_unlink(dir, dentry);
+	if (obfs_empty_dir(inode)) {
+		err = obfs_unlink(dir, dentry);
 		if (!err) {
 			inode_dec_link_count(dir);
 			inode_dec_link_count(inode);
@@ -181,62 +181,62 @@ static int xinix_rmdir(struct inode * dir, struct dentry *dentry)
 	return err;
 }
 
-static int xinix_rename(struct inode * old_dir, struct dentry *old_dentry,
+static int obfs_rename(struct inode * old_dir, struct dentry *old_dentry,
 			struct inode * new_dir, struct dentry *new_dentry,
 			unsigned int flags)
 {
 	struct inode * old_inode = d_inode(old_dentry);
 	struct inode * new_inode = d_inode(new_dentry);
 	struct page * dir_page = NULL;
-	struct xinix_dir_entry * dir_de = NULL;
+	struct obfs_dir_entry * dir_de = NULL;
 	struct page * old_page;
-	struct xinix_dir_entry * old_de;
+	struct obfs_dir_entry * old_de;
 	int err = -ENOENT;
 
 	if (flags & ~RENAME_NOREPLACE)
 		return -EINVAL;
 
-	old_de = xinix_find_entry(old_dentry, &old_page);
+	old_de = obfs_find_entry(old_dentry, &old_page);
 	if (!old_de)
 		goto out;
 
 	if (S_ISDIR(old_inode->i_mode)) {
 		err = -EIO;
-		dir_de = xinix_dotdot(old_inode, &dir_page);
+		dir_de = obfs_dotdot(old_inode, &dir_page);
 		if (!dir_de)
 			goto out_old;
 	}
 
 	if (new_inode) {
 		struct page * new_page;
-		struct xinix_dir_entry * new_de;
+		struct obfs_dir_entry * new_de;
 
 		err = -ENOTEMPTY;
-		if (dir_de && !xinix_empty_dir(new_inode))
+		if (dir_de && !obfs_empty_dir(new_inode))
 			goto out_dir;
 
 		err = -ENOENT;
-		new_de = xinix_find_entry(new_dentry, &new_page);
+		new_de = obfs_find_entry(new_dentry, &new_page);
 		if (!new_de)
 			goto out_dir;
-		xinix_set_link(new_de, new_page, old_inode);
+		obfs_set_link(new_de, new_page, old_inode);
 		new_inode->i_ctime = current_time(new_inode);
 		if (dir_de)
 			drop_nlink(new_inode);
 		inode_dec_link_count(new_inode);
 	} else {
-		err = xinix_add_link(new_dentry, old_inode);
+		err = obfs_add_link(new_dentry, old_inode);
 		if (err)
 			goto out_dir;
 		if (dir_de)
 			inode_inc_link_count(new_dir);
 	}
 
-	xinix_delete_entry(old_de, old_page);
+	obfs_delete_entry(old_de, old_page);
 	mark_inode_dirty(old_inode);
 
 	if (dir_de) {
-		xinix_set_link(dir_de, dir_page, new_dir);
+		obfs_set_link(dir_de, dir_page, new_dir);
 		inode_dec_link_count(old_dir);
 	}
 	return 0;
@@ -256,16 +256,16 @@ out:
 /*
  * directories can handle most operations...
  */
-const struct inode_operations xinix_dir_inode_operations = {
-	.create		= xinix_create,
-	.lookup		= xinix_lookup,
-	.link		= xinix_link,
-	.unlink		= xinix_unlink,
-	.symlink	= xinix_symlink,
-	.mkdir		= xinix_mkdir,
-	.rmdir		= xinix_rmdir,
-	.mknod		= xinix_mknod,
-	.rename		= xinix_rename,
-	.getattr	= xinix_getattr,
-	.tmpfile	= xinix_tmpfile,
+const struct inode_operations obfs_dir_inode_operations = {
+	.create		= obfs_create,
+	.lookup		= obfs_lookup,
+	.link		= obfs_link,
+	.unlink		= obfs_unlink,
+	.symlink	= obfs_symlink,
+	.mkdir		= obfs_mkdir,
+	.rmdir		= obfs_rmdir,
+	.mknod		= obfs_mknod,
+	.rename		= obfs_rename,
+	.getattr	= obfs_getattr,
+	.tmpfile	= obfs_tmpfile,
 };

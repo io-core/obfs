@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- *  linux/fs/xinix/dir.c
+ *  linux/fs/obfs/dir.c
  *
  *  Copyright (C) 1991, 1992 Linus Torvalds
  *
- *  xinix directory handling functions
+ *  obfs directory handling functions
  *
  *  Updated to filesystem version 3 by Daniel Aragones
  */
@@ -14,15 +14,15 @@
 #include <linux/highmem.h>
 #include <linux/swap.h>
 
-typedef struct xinix_dir_entry xinix_dirent;
-typedef struct xinix3_dir_entry xinix3_dirent;
+typedef struct obfs_dir_entry obfs_dirent;
+typedef struct obfs3_dir_entry obfs3_dirent;
 
-static int xinix_readdir(struct file *, struct dir_context *);
+static int obfs_readdir(struct file *, struct dir_context *);
 
-const struct file_operations xinix_dir_operations = {
+const struct file_operations obfs_dir_operations = {
 	.llseek		= generic_file_llseek,
 	.read		= generic_read_dir,
-	.iterate_shared	= xinix_readdir,
+	.iterate_shared	= obfs_readdir,
 	.fsync		= generic_file_fsync,
 };
 
@@ -37,7 +37,7 @@ static inline void dir_put_page(struct page *page)
  * byte in that page, plus one.
  */
 static unsigned
-xinix_last_byte(struct inode *inode, unsigned long page_nr)
+obfs_last_byte(struct inode *inode, unsigned long page_nr)
 {
 	unsigned last_byte = PAGE_SIZE;
 
@@ -73,16 +73,16 @@ static struct page * dir_get_page(struct inode *dir, unsigned long n)
 	return page;
 }
 
-static inline void *xinix_next_entry(void *de, struct xinix_sb_info *sbi)
+static inline void *obfs_next_entry(void *de, struct obfs_sb_info *sbi)
 {
 	return (void*)((char*)de + sbi->s_dirsize);
 }
 
-static int xinix_readdir(struct file *file, struct dir_context *ctx)
+static int obfs_readdir(struct file *file, struct dir_context *ctx)
 {
 	struct inode *inode = file_inode(file);
 	struct super_block *sb = inode->i_sb;
-	struct xinix_sb_info *sbi = xinix_sb(sb);
+	struct obfs_sb_info *sbi = obfs_sb(sb);
 	unsigned chunk_size = sbi->s_dirsize;
 	unsigned long npages = dir_pages(inode);
 	unsigned long pos = ctx->pos;
@@ -104,16 +104,16 @@ static int xinix_readdir(struct file *file, struct dir_context *ctx)
 			continue;
 		kaddr = (char *)page_address(page);
 		p = kaddr+offset;
-		limit = kaddr + xinix_last_byte(inode, n) - chunk_size;
-		for ( ; p <= limit; p = xinix_next_entry(p, sbi)) {
+		limit = kaddr + obfs_last_byte(inode, n) - chunk_size;
+		for ( ; p <= limit; p = obfs_next_entry(p, sbi)) {
 			const char *name;
 			__u32 inumber;
 			if (sbi->s_version == MINIX_V3) {
-				xinix3_dirent *de3 = (xinix3_dirent *)p;
+				obfs3_dirent *de3 = (obfs3_dirent *)p;
 				name = de3->name;
 				inumber = de3->inode;
 	 		} else {
-				xinix_dirent *de = (xinix_dirent *)p;
+				obfs_dirent *de = (obfs_dirent *)p;
 				name = de->name;
 				inumber = de->inode;
 			}
@@ -141,20 +141,20 @@ static inline int namecompare(int len, int maxlen,
 }
 
 /*
- *	xinix_find_entry()
+ *	obfs_find_entry()
  *
  * finds an entry in the specified directory with the wanted name. It
  * returns the cache buffer in which the entry was found, and the entry
  * itself (as a parameter - res_dir). It does NOT read the inode of the
  * entry - you'll have to do that yourself if you want to.
  */
-xinix_dirent *xinix_find_entry(struct dentry *dentry, struct page **res_page)
+obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
 {
 	const char * name = dentry->d_name.name;
 	int namelen = dentry->d_name.len;
 	struct inode * dir = d_inode(dentry->d_parent);
 	struct super_block * sb = dir->i_sb;
-	struct xinix_sb_info * sbi = xinix_sb(sb);
+	struct obfs_sb_info * sbi = obfs_sb(sb);
 	unsigned long n;
 	unsigned long npages = dir_pages(dir);
 	struct page *page = NULL;
@@ -172,14 +172,14 @@ xinix_dirent *xinix_find_entry(struct dentry *dentry, struct page **res_page)
 			continue;
 
 		kaddr = (char*)page_address(page);
-		limit = kaddr + xinix_last_byte(dir, n) - sbi->s_dirsize;
-		for (p = kaddr; p <= limit; p = xinix_next_entry(p, sbi)) {
+		limit = kaddr + obfs_last_byte(dir, n) - sbi->s_dirsize;
+		for (p = kaddr; p <= limit; p = obfs_next_entry(p, sbi)) {
 			if (sbi->s_version == MINIX_V3) {
-				xinix3_dirent *de3 = (xinix3_dirent *)p;
+				obfs3_dirent *de3 = (obfs3_dirent *)p;
 				namx = de3->name;
 				inumber = de3->inode;
  			} else {
-				xinix_dirent *de = (xinix_dirent *)p;
+				obfs_dirent *de = (obfs_dirent *)p;
 				namx = de->name;
 				inumber = de->inode;
 			}
@@ -194,22 +194,22 @@ xinix_dirent *xinix_find_entry(struct dentry *dentry, struct page **res_page)
 
 found:
 	*res_page = page;
-	return (xinix_dirent *)p;
+	return (obfs_dirent *)p;
 }
 
-int xinix_add_link(struct dentry *dentry, struct inode *inode)
+int obfs_add_link(struct dentry *dentry, struct inode *inode)
 {
 	struct inode *dir = d_inode(dentry->d_parent);
 	const char * name = dentry->d_name.name;
 	int namelen = dentry->d_name.len;
 	struct super_block * sb = dir->i_sb;
-	struct xinix_sb_info * sbi = xinix_sb(sb);
+	struct obfs_sb_info * sbi = obfs_sb(sb);
 	struct page *page = NULL;
 	unsigned long npages = dir_pages(dir);
 	unsigned long n;
 	char *kaddr, *p;
-	xinix_dirent *de;
-	xinix3_dirent *de3;
+	obfs_dirent *de;
+	obfs3_dirent *de3;
 	loff_t pos;
 	int err;
 	char *namx = NULL;
@@ -229,11 +229,11 @@ int xinix_add_link(struct dentry *dentry, struct inode *inode)
 			goto out;
 		lock_page(page);
 		kaddr = (char*)page_address(page);
-		dir_end = kaddr + xinix_last_byte(dir, n);
+		dir_end = kaddr + obfs_last_byte(dir, n);
 		limit = kaddr + PAGE_SIZE - sbi->s_dirsize;
-		for (p = kaddr; p <= limit; p = xinix_next_entry(p, sbi)) {
-			de = (xinix_dirent *)p;
-			de3 = (xinix3_dirent *)p;
+		for (p = kaddr; p <= limit; p = obfs_next_entry(p, sbi)) {
+			de = (obfs_dirent *)p;
+			de3 = (obfs3_dirent *)p;
 			if (sbi->s_version == MINIX_V3) {
 				namx = de3->name;
 				inumber = de3->inode;
@@ -263,7 +263,7 @@ int xinix_add_link(struct dentry *dentry, struct inode *inode)
 
 got_it:
 	pos = page_offset(page) + p - (char *)page_address(page);
-	err = xinix_prepare_chunk(page, pos, sbi->s_dirsize);
+	err = obfs_prepare_chunk(page, pos, sbi->s_dirsize);
 	if (err)
 		goto out_unlock;
 	memcpy (namx, name, namelen);
@@ -286,20 +286,20 @@ out_unlock:
 	goto out_put;
 }
 
-int xinix_delete_entry(struct xinix_dir_entry *de, struct page *page)
+int obfs_delete_entry(struct obfs_dir_entry *de, struct page *page)
 {
 	struct inode *inode = page->mapping->host;
 	char *kaddr = page_address(page);
 	loff_t pos = page_offset(page) + (char*)de - kaddr;
-	struct xinix_sb_info *sbi = xinix_sb(inode->i_sb);
+	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
 	unsigned len = sbi->s_dirsize;
 	int err;
 
 	lock_page(page);
-	err = xinix_prepare_chunk(page, pos, len);
+	err = obfs_prepare_chunk(page, pos, len);
 	if (err == 0) {
 		if (sbi->s_version == MINIX_V3)
-			((xinix3_dirent *) de)->inode = 0;
+			((obfs3_dirent *) de)->inode = 0;
 		else
 			de->inode = 0;
 		err = dir_commit_chunk(page, pos, len);
@@ -312,16 +312,16 @@ int xinix_delete_entry(struct xinix_dir_entry *de, struct page *page)
 	return err;
 }
 
-int xinix_make_empty(struct inode *inode, struct inode *dir)
+int obfs_make_empty(struct inode *inode, struct inode *dir)
 {
 	struct page *page = grab_cache_page(inode->i_mapping, 0);
-	struct xinix_sb_info *sbi = xinix_sb(inode->i_sb);
+	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
 	char *kaddr;
 	int err;
 
 	if (!page)
 		return -ENOMEM;
-	err = xinix_prepare_chunk(page, 0, 2 * sbi->s_dirsize);
+	err = obfs_prepare_chunk(page, 0, 2 * sbi->s_dirsize);
 	if (err) {
 		unlock_page(page);
 		goto fail;
@@ -331,19 +331,19 @@ int xinix_make_empty(struct inode *inode, struct inode *dir)
 	memset(kaddr, 0, PAGE_SIZE);
 
 	if (sbi->s_version == MINIX_V3) {
-		xinix3_dirent *de3 = (xinix3_dirent *)kaddr;
+		obfs3_dirent *de3 = (obfs3_dirent *)kaddr;
 
 		de3->inode = inode->i_ino;
 		strcpy(de3->name, ".");
-		de3 = xinix_next_entry(de3, sbi);
+		de3 = obfs_next_entry(de3, sbi);
 		de3->inode = dir->i_ino;
 		strcpy(de3->name, "..");
 	} else {
-		xinix_dirent *de = (xinix_dirent *)kaddr;
+		obfs_dirent *de = (obfs_dirent *)kaddr;
 
 		de->inode = inode->i_ino;
 		strcpy(de->name, ".");
-		de = xinix_next_entry(de, sbi);
+		de = obfs_next_entry(de, sbi);
 		de->inode = dir->i_ino;
 		strcpy(de->name, "..");
 	}
@@ -358,11 +358,11 @@ fail:
 /*
  * routine to check that the specified directory is empty (for rmdir)
  */
-int xinix_empty_dir(struct inode * inode)
+int obfs_empty_dir(struct inode * inode)
 {
 	struct page *page = NULL;
 	unsigned long i, npages = dir_pages(inode);
-	struct xinix_sb_info *sbi = xinix_sb(inode->i_sb);
+	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
 	char *name;
 	__u32 inumber;
 
@@ -374,14 +374,14 @@ int xinix_empty_dir(struct inode * inode)
 			continue;
 
 		kaddr = (char *)page_address(page);
-		limit = kaddr + xinix_last_byte(inode, i) - sbi->s_dirsize;
-		for (p = kaddr; p <= limit; p = xinix_next_entry(p, sbi)) {
+		limit = kaddr + obfs_last_byte(inode, i) - sbi->s_dirsize;
+		for (p = kaddr; p <= limit; p = obfs_next_entry(p, sbi)) {
 			if (sbi->s_version == MINIX_V3) {
-				xinix3_dirent *de3 = (xinix3_dirent *)p;
+				obfs3_dirent *de3 = (obfs3_dirent *)p;
 				name = de3->name;
 				inumber = de3->inode;
 			} else {
-				xinix_dirent *de = (xinix_dirent *)p;
+				obfs_dirent *de = (obfs_dirent *)p;
 				name = de->name;
 				inumber = de->inode;
 			}
@@ -409,21 +409,21 @@ not_empty:
 }
 
 /* Releases the page */
-void xinix_set_link(struct xinix_dir_entry *de, struct page *page,
+void obfs_set_link(struct obfs_dir_entry *de, struct page *page,
 	struct inode *inode)
 {
 	struct inode *dir = page->mapping->host;
-	struct xinix_sb_info *sbi = xinix_sb(dir->i_sb);
+	struct obfs_sb_info *sbi = obfs_sb(dir->i_sb);
 	loff_t pos = page_offset(page) +
 			(char *)de-(char*)page_address(page);
 	int err;
 
 	lock_page(page);
 
-	err = xinix_prepare_chunk(page, pos, sbi->s_dirsize);
+	err = obfs_prepare_chunk(page, pos, sbi->s_dirsize);
 	if (err == 0) {
 		if (sbi->s_version == MINIX_V3)
-			((xinix3_dirent *) de)->inode = inode->i_ino;
+			((obfs3_dirent *) de)->inode = inode->i_ino;
 		else
 			de->inode = inode->i_ino;
 		err = dir_commit_chunk(page, pos, sbi->s_dirsize);
@@ -435,32 +435,32 @@ void xinix_set_link(struct xinix_dir_entry *de, struct page *page,
 	mark_inode_dirty(dir);
 }
 
-struct xinix_dir_entry * xinix_dotdot (struct inode *dir, struct page **p)
+struct obfs_dir_entry * obfs_dotdot (struct inode *dir, struct page **p)
 {
 	struct page *page = dir_get_page(dir, 0);
-	struct xinix_sb_info *sbi = xinix_sb(dir->i_sb);
-	struct xinix_dir_entry *de = NULL;
+	struct obfs_sb_info *sbi = obfs_sb(dir->i_sb);
+	struct obfs_dir_entry *de = NULL;
 
 	if (!IS_ERR(page)) {
-		de = xinix_next_entry(page_address(page), sbi);
+		de = obfs_next_entry(page_address(page), sbi);
 		*p = page;
 	}
 	return de;
 }
 
-ino_t xinix_inode_by_name(struct dentry *dentry)
+ino_t obfs_inode_by_name(struct dentry *dentry)
 {
 	struct page *page;
-	struct xinix_dir_entry *de = xinix_find_entry(dentry, &page);
+	struct obfs_dir_entry *de = obfs_find_entry(dentry, &page);
 	ino_t res = 0;
 
 	if (de) {
 		struct address_space *mapping = page->mapping;
 		struct inode *inode = mapping->host;
-		struct xinix_sb_info *sbi = xinix_sb(inode->i_sb);
+		struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
 
 		if (sbi->s_version == MINIX_V3)
-			res = ((xinix3_dirent *) de)->inode;
+			res = ((obfs3_dirent *) de)->inode;
 		else
 			res = de->inode;
 		dir_put_page(page);

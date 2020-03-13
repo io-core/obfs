@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
-# Makefile for the Linux xinix filesystem routines.
+# Makefile for the Linux obfs filesystem routines.
 #
 
 #obj-$(CONFIG_MINIX_FS) += minix.o
@@ -11,9 +11,9 @@
 
 
 
-obj-m := xinix.o
+obj-m := obfs.o
 
-xinix-objs := bitmap.o itree_v1.o itree_v2.o namei.o inode.o file.o dir.o
+obfs-objs := bitmap.o itree_v1.o itree_v2.o namei.o inode.o file.o dir.o
 
 
 #obj-m := iofs.o

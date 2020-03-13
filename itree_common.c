@@ -74,13 +74,13 @@ static int alloc_branch(struct inode *inode,
 {
 	int n = 0;
 	int i;
-	int parent = xinix_new_block(inode);
+	int parent = obfs_new_block(inode);
 
 	branch[0].key = cpu_to_block(parent);
 	if (parent) for (n = 1; n < num; n++) {
 		struct buffer_head *bh;
 		/* Allocate the next block */
-		int nr = xinix_new_block(inode);
+		int nr = obfs_new_block(inode);
 		if (!nr)
 			break;
 		branch[n].key = cpu_to_block(nr);
@@ -102,7 +102,7 @@ static int alloc_branch(struct inode *inode,
 	for (i = 1; i < n; i++)
 		bforget(branch[i].bh);
 	for (i = 0; i < n; i++)
-		xinix_free_block(inode, block_to_cpu(branch[i].key));
+		obfs_free_block(inode, block_to_cpu(branch[i].key));
 	return -ENOSPC;
 }
 
@@ -139,7 +139,7 @@ changed:
 	for (i = 1; i < num; i++)
 		bforget(where[i].bh);
 	for (i = 0; i < num; i++)
-		xinix_free_block(inode, block_to_cpu(where[i].key));
+		obfs_free_block(inode, block_to_cpu(where[i].key));
 	return -EAGAIN;
 }
 
@@ -262,7 +262,7 @@ static inline void free_data(struct inode *inode, block_t *p, block_t *q)
 		nr = block_to_cpu(*p);
 		if (nr) {
 			*p = 0;
-			xinix_free_block(inode, nr);
+			obfs_free_block(inode, nr);
 		}
 	}
 }
@@ -284,7 +284,7 @@ static void free_branches(struct inode *inode, block_t *p, block_t *q, int depth
 			free_branches(inode, (block_t*)bh->b_data,
 				      block_end(bh), depth);
 			bforget(bh);
-			xinix_free_block(inode, nr);
+			obfs_free_block(inode, nr);
 			mark_inode_dirty(inode);
 		}
 	} else

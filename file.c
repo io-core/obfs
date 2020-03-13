@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- *  linux/fs/xinix/file.c
+ *  linux/fs/obfs/file.c
  *
  *  Copyright (C) 1991, 1992 Linus Torvalds
  *
- *  xinix regular file handling primitives
+ *  obfs regular file handling primitives
  */
 
 #include "obfs.h"
 
 /*
  * We have mostly NULLs here: the current defaults are OK for
- * the xinix filesystem.
+ * the obfs filesystem.
  */
-const struct file_operations xinix_file_operations = {
+const struct file_operations obfs_file_operations = {
 	.llseek		= generic_file_llseek,
 	.read_iter	= generic_file_read_iter,
 	.write_iter	= generic_file_write_iter,
@@ -22,7 +22,7 @@ const struct file_operations xinix_file_operations = {
 	.splice_read	= generic_file_splice_read,
 };
 
-static int xinix_setattr(struct dentry *dentry, struct iattr *attr)
+static int obfs_setattr(struct dentry *dentry, struct iattr *attr)
 {
 	struct inode *inode = d_inode(dentry);
 	int error;
@@ -38,7 +38,7 @@ static int xinix_setattr(struct dentry *dentry, struct iattr *attr)
 			return error;
 
 		truncate_setsize(inode, attr->ia_size);
-		xinix_truncate(inode);
+		obfs_truncate(inode);
 	}
 
 	setattr_copy(inode, attr);
@@ -46,7 +46,7 @@ static int xinix_setattr(struct dentry *dentry, struct iattr *attr)
 	return 0;
 }
 
-const struct inode_operations xinix_file_inode_operations = {
-	.setattr	= xinix_setattr,
-	.getattr	= xinix_getattr,
+const struct inode_operations obfs_file_inode_operations = {
+	.setattr	= obfs_setattr,
+	.getattr	= obfs_getattr,
 };

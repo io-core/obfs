@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- *  linux/fs/xinix/bitmap.c
+ *  linux/fs/obfs/bitmap.c
  *
  *  Copyright (C) 1991, 1992  Linus Torvalds
  */
@@ -39,10 +39,10 @@ static __u32 count_free(struct buffer_head *map[], unsigned blocksize, __u32 num
 	return sum;
 }
 
-void xinix_free_block(struct inode *inode, unsigned long block)
+void obfs_free_block(struct inode *inode, unsigned long block)
 {
 	struct super_block *sb = inode->i_sb;
-	struct xinix_sb_info *sbi = xinix_sb(sb);
+	struct obfs_sb_info *sbi = obfs_sb(sb);
 	struct buffer_head *bh;
 	int k = sb->s_blocksize_bits + 3;
 	unsigned long bit, zone;
@@ -55,22 +55,22 @@ void xinix_free_block(struct inode *inode, unsigned long block)
 	bit = zone & ((1<<k) - 1);
 	zone >>= k;
 	if (zone >= sbi->s_zmap_blocks) {
-		printk("xinix_free_block: nonexistent bitmap buffer\n");
+		printk("obfs_free_block: nonexistent bitmap buffer\n");
 		return;
 	}
 	bh = sbi->s_zmap[zone];
 	spin_lock(&bitmap_lock);
-	if (!xinix_test_and_clear_bit(bit, bh->b_data))
-		printk("xinix_free_block (%s:%lu): bit already cleared\n",
+	if (!obfs_test_and_clear_bit(bit, bh->b_data))
+		printk("obfs_free_block (%s:%lu): bit already cleared\n",
 		       sb->s_id, block);
 	spin_unlock(&bitmap_lock);
 	mark_buffer_dirty(bh);
 	return;
 }
 
-int xinix_new_block(struct inode * inode)
+int obfs_new_block(struct inode * inode)
 {
-	struct xinix_sb_info *sbi = xinix_sb(inode->i_sb);
+	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
 	int bits_per_zone = 8 * inode->i_sb->s_blocksize;
 	int i;
 
@@ -79,9 +79,9 @@ int xinix_new_block(struct inode * inode)
 		int j;
 
 		spin_lock(&bitmap_lock);
-		j = xinix_find_first_zero_bit(bh->b_data, bits_per_zone);
+		j = obfs_find_first_zero_bit(bh->b_data, bits_per_zone);
 		if (j < bits_per_zone) {
-			xinix_set_bit(j, bh->b_data);
+			obfs_set_bit(j, bh->b_data);
 			spin_unlock(&bitmap_lock);
 			mark_buffer_dirty(bh);
 			j += i * bits_per_zone + sbi->s_firstdatazone-1;
@@ -94,21 +94,21 @@ int xinix_new_block(struct inode * inode)
 	return 0;
 }
 
-unsigned long xinix_count_free_blocks(struct super_block *sb)
+unsigned long obfs_count_free_blocks(struct super_block *sb)
 {
-	struct xinix_sb_info *sbi = xinix_sb(sb);
+	struct obfs_sb_info *sbi = obfs_sb(sb);
 	u32 bits = sbi->s_nzones - sbi->s_firstdatazone + 1;
 
 	return (count_free(sbi->s_zmap, sb->s_blocksize, bits)
 		<< sbi->s_log_zone_size);
 }
 
-struct xinix_inode *
-xinix_V1_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
+struct obfs_inode *
+obfs_V1_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 {
 	int block;
-	struct xinix_sb_info *sbi = xinix_sb(sb);
-	struct xinix_inode *p;
+	struct obfs_sb_info *sbi = obfs_sb(sb);
+	struct obfs_inode *p;
 
 	if (!ino || ino > sbi->s_ninodes) {
 		printk("Bad inode number on dev %s: %ld is out of range\n",
@@ -127,13 +127,13 @@ xinix_V1_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 	return p + ino % MINIX_INODES_PER_BLOCK;
 }
 
-struct xinix2_inode *
-xinix_V2_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
+struct obfs2_inode *
+obfs_V2_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 {
 	int block;
-	struct xinix_sb_info *sbi = xinix_sb(sb);
-	struct xinix2_inode *p;
-	int xinix2_inodes_per_block = sb->s_blocksize / sizeof(struct xinix2_inode);
+	struct obfs_sb_info *sbi = obfs_sb(sb);
+	struct obfs2_inode *p;
+	int obfs2_inodes_per_block = sb->s_blocksize / sizeof(struct obfs2_inode);
 
 	*bh = NULL;
 	if (!ino || ino > sbi->s_ninodes) {
@@ -143,32 +143,32 @@ xinix_V2_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 	}
 	ino--;
 	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks +
-		 ino / xinix2_inodes_per_block;
+		 ino / obfs2_inodes_per_block;
 	*bh = sb_bread(sb, block);
 	if (!*bh) {
 		printk("Unable to read inode block\n");
 		return NULL;
 	}
 	p = (void *)(*bh)->b_data;
-	return p + ino % xinix2_inodes_per_block;
+	return p + ino % obfs2_inodes_per_block;
 }
 
 /* Clear the link count and mode of a deleted inode on disk. */
 
-static void xinix_clear_inode(struct inode *inode)
+static void obfs_clear_inode(struct inode *inode)
 {
 	struct buffer_head *bh = NULL;
 
 	if (INODE_VERSION(inode) == MINIX_V1) {
-		struct xinix_inode *raw_inode;
-		raw_inode = xinix_V1_raw_inode(inode->i_sb, inode->i_ino, &bh);
+		struct obfs_inode *raw_inode;
+		raw_inode = obfs_V1_raw_inode(inode->i_sb, inode->i_ino, &bh);
 		if (raw_inode) {
 			raw_inode->i_nlinks = 0;
 			raw_inode->i_mode = 0;
 		}
 	} else {
-		struct xinix2_inode *raw_inode;
-		raw_inode = xinix_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
+		struct obfs2_inode *raw_inode;
+		raw_inode = obfs_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
 		if (raw_inode) {
 			raw_inode->i_nlinks = 0;
 			raw_inode->i_mode = 0;
@@ -180,40 +180,40 @@ static void xinix_clear_inode(struct inode *inode)
 	}
 }
 
-void xinix_free_inode(struct inode * inode)
+void obfs_free_inode(struct inode * inode)
 {
 	struct super_block *sb = inode->i_sb;
-	struct xinix_sb_info *sbi = xinix_sb(inode->i_sb);
+	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
 	struct buffer_head *bh;
 	int k = sb->s_blocksize_bits + 3;
 	unsigned long ino, bit;
 
 	ino = inode->i_ino;
 	if (ino < 1 || ino > sbi->s_ninodes) {
-		printk("xinix_free_inode: inode 0 or nonexistent inode\n");
+		printk("obfs_free_inode: inode 0 or nonexistent inode\n");
 		return;
 	}
 	bit = ino & ((1<<k) - 1);
 	ino >>= k;
 	if (ino >= sbi->s_imap_blocks) {
-		printk("xinix_free_inode: nonexistent imap in superblock\n");
+		printk("obfs_free_inode: nonexistent imap in superblock\n");
 		return;
 	}
 
-	xinix_clear_inode(inode);	/* clear on-disk copy */
+	obfs_clear_inode(inode);	/* clear on-disk copy */
 
 	bh = sbi->s_imap[ino];
 	spin_lock(&bitmap_lock);
-	if (!xinix_test_and_clear_bit(bit, bh->b_data))
-		printk("xinix_free_inode: bit %lu already cleared\n", bit);
+	if (!obfs_test_and_clear_bit(bit, bh->b_data))
+		printk("obfs_free_inode: bit %lu already cleared\n", bit);
 	spin_unlock(&bitmap_lock);
 	mark_buffer_dirty(bh);
 }
 
-struct inode *xinix_new_inode(const struct inode *dir, umode_t mode, int *error)
+struct inode *obfs_new_inode(const struct inode *dir, umode_t mode, int *error)
 {
 	struct super_block *sb = dir->i_sb;
-	struct xinix_sb_info *sbi = xinix_sb(sb);
+	struct obfs_sb_info *sbi = obfs_sb(sb);
 	struct inode *inode = new_inode(sb);
 	struct buffer_head * bh;
 	int bits_per_zone = 8 * sb->s_blocksize;
@@ -230,7 +230,7 @@ struct inode *xinix_new_inode(const struct inode *dir, umode_t mode, int *error)
 	spin_lock(&bitmap_lock);
 	for (i = 0; i < sbi->s_imap_blocks; i++) {
 		bh = sbi->s_imap[i];
-		j = xinix_find_first_zero_bit(bh->b_data, bits_per_zone);
+		j = obfs_find_first_zero_bit(bh->b_data, bits_per_zone);
 		if (j < bits_per_zone)
 			break;
 	}
@@ -239,9 +239,9 @@ struct inode *xinix_new_inode(const struct inode *dir, umode_t mode, int *error)
 		iput(inode);
 		return NULL;
 	}
-	if (xinix_test_and_set_bit(j, bh->b_data)) {	/* shouldn't happen */
+	if (obfs_test_and_set_bit(j, bh->b_data)) {	/* shouldn't happen */
 		spin_unlock(&bitmap_lock);
-		printk("xinix_new_inode: bit already set\n");
+		printk("obfs_new_inode: bit already set\n");
 		iput(inode);
 		return NULL;
 	}
@@ -256,7 +256,7 @@ struct inode *xinix_new_inode(const struct inode *dir, umode_t mode, int *error)
 	inode->i_ino = j;
 	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
 	inode->i_blocks = 0;
-	memset(&xinix_i(inode)->u, 0, sizeof(xinix_i(inode)->u));
+	memset(&obfs_i(inode)->u, 0, sizeof(obfs_i(inode)->u));
 	insert_inode_hash(inode);
 	mark_inode_dirty(inode);
 
@@ -264,9 +264,9 @@ struct inode *xinix_new_inode(const struct inode *dir, umode_t mode, int *error)
 	return inode;
 }
 
-unsigned long xinix_count_free_inodes(struct super_block *sb)
+unsigned long obfs_count_free_inodes(struct super_block *sb)
 {
-	struct xinix_sb_info *sbi = xinix_sb(sb);
+	struct obfs_sb_info *sbi = obfs_sb(sb);
 	u32 bits = sbi->s_ninodes + 1;
 
 	return count_free(sbi->s_imap, sb->s_blocksize, bits);
