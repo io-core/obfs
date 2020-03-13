@@ -149,10 +149,10 @@ static int obfs_remount (struct super_block * sb, int * flags, char * data)
 		mark_buffer_dirty(sbi->s_sbh);
 
 		if (!(sbi->s_mount_state & OBFS_VALID_FS))
-			printk("MINIX-fs warning: remounting unchecked fs, "
+			printk("OBFS warning: remounting unchecked fs, "
 				"running fsck is recommended\n");
 		else if ((sbi->s_mount_state & OBFS_ERROR_FS))
-			printk("MINIX-fs warning: remounting fs with errors, "
+			printk("OBFS warning: remounting fs with errors, "
 				"running fsck is recommended\n");
 	}
 	return 0;
@@ -269,7 +269,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	 */
 	block = obfs_blocks_needed(sbi->s_ninodes, s->s_blocksize);
 	if (sbi->s_imap_blocks < block) {
-		printk("MINIX-fs: file system does not have enough "
+		printk("OBFS: file system does not have enough "
 				"imap blocks allocated.  Refusing to mount.\n");
 		goto out_no_bitmap;
 	}
@@ -278,7 +278,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 			(sbi->s_nzones - sbi->s_firstdatazone + 1),
 			s->s_blocksize);
 	if (sbi->s_zmap_blocks < block) {
-		printk("MINIX-fs: file system does not have enough "
+		printk("OBFS: file system does not have enough "
 				"zmap blocks allocated.  Refusing to mount.\n");
 		goto out_no_bitmap;
 	}
@@ -302,21 +302,21 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 		mark_buffer_dirty(bh);
 	}
 	if (!(sbi->s_mount_state & OBFS_VALID_FS))
-		printk("MINIX-fs: mounting unchecked file system, "
+		printk("OBFS: mounting unchecked file system, "
 			"running fsck is recommended\n");
 	else if (sbi->s_mount_state & OBFS_ERROR_FS)
-		printk("MINIX-fs: mounting file system with errors, "
+		printk("OBFS: mounting file system with errors, "
 			"running fsck is recommended\n");
 
 	return 0;
 
 out_no_root:
 	if (!silent)
-		printk("MINIX-fs: get root inode failed\n");
+		printk("OBFS: get root inode failed\n");
 	goto out_freemap;
 
 out_no_bitmap:
-	printk("MINIX-fs: bad superblock or unable to read bitmaps\n");
+	printk("OBFS: bad superblock or unable to read bitmaps\n");
 out_freemap:
 	for (i = 0; i < sbi->s_imap_blocks; i++)
 		brelse(sbi->s_imap[i]);
@@ -328,12 +328,12 @@ out_freemap:
 out_no_map:
 	ret = -ENOMEM;
 	if (!silent)
-		printk("MINIX-fs: can't allocate map\n");
+		printk("OBFS: can't allocate map\n");
 	goto out_release;
 
 out_illegal_sb:
 	if (!silent)
-		printk("MINIX-fs: bad superblock\n");
+		printk("OBFS: bad superblock\n");
 	goto out_release;
 
 out_no_fs:
@@ -345,11 +345,11 @@ out_release:
 	goto out;
 
 out_bad_hblock:
-	printk("MINIX-fs: blocksize too small for device\n");
+	printk("OBFS: blocksize too small for device\n");
 	goto out;
 
 out_bad_sb:
-	printk("MINIX-fs: unable to read superblock\n");
+	printk("OBFS: unable to read superblock\n");
 out:
 	s->s_fs_info = NULL;
 	kfree(sbi);
