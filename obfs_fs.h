@@ -26,21 +26,21 @@
 #define OBFS_VALID_FS		0x0001		/* Clean fs. */
 #define OBFS_ERROR_FS		0x0002		/* fs has errors. */
 
-#define OBFS_INODES_PER_BLOCK ((BLOCK_SIZE)/(sizeof (struct obfs_inode)))
+//#define OBFS_INODES_PER_BLOCK ((BLOCK_SIZE)/(sizeof (struct obfs_inode)))
 
-/*
- * This is the original obfs inode layout on disk.
- * Note the 8-bit gid and atime and ctime.
- */
-struct obfs_inode {
-	__u16 i_mode;
-	__u16 i_uid;
-	__u32 i_size;
-	__u32 i_time;
-	__u8  i_gid;
-	__u8  i_nlinks;
-	__u16 i_zone[9];
-};
+///*
+// * This is the original obfs inode layout on disk.
+// * Note the 8-bit gid and atime and ctime.
+// */
+//struct obfs_inode {
+//	__u16 i_mode;
+//	__u16 i_uid;
+//	__u32 i_size;
+//	__u32 i_time;
+//	__u8  i_gid;
+//	__u8  i_nlinks;
+//	__u16 i_zone[9];
+//};
 
 /*
  * The new obfs inode has all the time entries, as well as

@@ -174,7 +174,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 		return -ENOMEM;
 	s->s_fs_info = sbi;
 
-	BUILD_BUG_ON(32 != sizeof (struct obfs_inode));
+//	BUILD_BUG_ON(32 != sizeof (struct obfs_inode));
 	BUILD_BUG_ON(64 != sizeof(struct obfs2_inode));
 
 	if (!sb_set_blocksize(s, BLOCK_SIZE))
@@ -378,9 +378,7 @@ static int obfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 static int obfs_get_block(struct inode *inode, sector_t block,
 		    struct buffer_head *bh_result, int create)
 {
-	if (INODE_VERSION(inode) == OBFS_V1)
-		return V1_obfs_get_block(inode, block, bh_result, create);
-	else
+
 		return V2_obfs_get_block(inode, block, bh_result, create);
 }
 
@@ -459,38 +457,6 @@ void obfs_set_inode(struct inode *inode, dev_t rdev)
 		init_special_inode(inode, inode->i_mode, rdev);
 }
 
-/*
- * The obfs V1 function to read an inode.
- */
-static struct inode *V1_obfs_iget(struct inode *inode)
-{
-	struct buffer_head * bh;
-	struct obfs_inode * raw_inode;
-	struct obfs_inode_info *obfs_inode = obfs_i(inode);
-	int i;
-
-	raw_inode = obfs_V1_raw_inode(inode->i_sb, inode->i_ino, &bh);
-	if (!raw_inode) {
-		iget_failed(inode);
-		return ERR_PTR(-EIO);
-	}
-	inode->i_mode = raw_inode->i_mode;
-	i_uid_write(inode, raw_inode->i_uid);
-	i_gid_write(inode, raw_inode->i_gid);
-	set_nlink(inode, raw_inode->i_nlinks);
-	inode->i_size = raw_inode->i_size;
-	inode->i_mtime.tv_sec = inode->i_atime.tv_sec = inode->i_ctime.tv_sec = raw_inode->i_time;
-	inode->i_mtime.tv_nsec = 0;
-	inode->i_atime.tv_nsec = 0;
-	inode->i_ctime.tv_nsec = 0;
-	inode->i_blocks = 0;
-	for (i = 0; i < 9; i++)
-		obfs_inode->u.i1_data[i] = raw_inode->i_zone[i];
-	obfs_set_inode(inode, old_decode_dev(raw_inode->i_zone[0]));
-	brelse(bh);
-	unlock_new_inode(inode);
-	return inode;
-}
 
 /*
  * The obfs V2 function to read an inode.
@@ -540,38 +506,9 @@ struct inode *obfs_iget(struct super_block *sb, unsigned long ino)
 	if (!(inode->i_state & I_NEW))
 		return inode;
 
-	if (INODE_VERSION(inode) == OBFS_V1)
-		return V1_obfs_iget(inode);
-	else
-		return V2_obfs_iget(inode);
+	return V2_obfs_iget(inode);
 }
 
-/*
- * The obfs V1 function to synchronize an inode.
- */
-static struct buffer_head * V1_obfs_update_inode(struct inode * inode)
-{
-	struct buffer_head * bh;
-	struct obfs_inode * raw_inode;
-	struct obfs_inode_info *obfs_inode = obfs_i(inode);
-	int i;
-
-	raw_inode = obfs_V1_raw_inode(inode->i_sb, inode->i_ino, &bh);
-	if (!raw_inode)
-		return NULL;
-	raw_inode->i_mode = inode->i_mode;
-	raw_inode->i_uid = fs_high2lowuid(i_uid_read(inode));
-	raw_inode->i_gid = fs_high2lowgid(i_gid_read(inode));
-	raw_inode->i_nlinks = inode->i_nlink;
-	raw_inode->i_size = inode->i_size;
-	raw_inode->i_time = inode->i_mtime.tv_sec;
-	if (S_ISCHR(inode->i_mode) || S_ISBLK(inode->i_mode))
-		raw_inode->i_zone[0] = old_encode_dev(inode->i_rdev);
-	else for (i = 0; i < 9; i++)
-		raw_inode->i_zone[i] = obfs_inode->u.i1_data[i];
-	mark_buffer_dirty(bh);
-	return bh;
-}
 
 /*
  * The obfs V2 function to synchronize an inode.
@@ -607,10 +544,7 @@ static int obfs_write_inode(struct inode *inode, struct writeback_control *wbc)
 	int err = 0;
 	struct buffer_head *bh;
 
-	if (INODE_VERSION(inode) == OBFS_V1)
-		bh = V1_obfs_update_inode(inode);
-	else
-		bh = V2_obfs_update_inode(inode);
+	bh = V2_obfs_update_inode(inode);
 	if (!bh)
 		return -EIO;
 	if (wbc->sync_mode == WB_SYNC_ALL && buffer_dirty(bh)) {
@@ -632,10 +566,7 @@ int obfs_getattr(const struct path *path, struct kstat *stat,
 	struct inode *inode = d_inode(path->dentry);
 
 	generic_fillattr(inode, stat);
-	if (INODE_VERSION(inode) == OBFS_V1)
-		stat->blocks = (BLOCK_SIZE / 512) * V1_obfs_blocks(stat->size, sb);
-	else
-		stat->blocks = (sb->s_blocksize / 512) * V2_obfs_blocks(stat->size, sb);
+	stat->blocks = (sb->s_blocksize / 512) * V2_obfs_blocks(stat->size, sb);
 	stat->blksize = sb->s_blocksize;
 	return 0;
 }
@@ -647,10 +578,7 @@ void obfs_truncate(struct inode * inode)
 {
 	if (!(S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)))
 		return;
-	if (INODE_VERSION(inode) == OBFS_V1)
-		V1_obfs_truncate(inode);
-	else
-		V2_obfs_truncate(inode);
+	V2_obfs_truncate(inode);
 }
 
 static struct dentry *obfs_mount(struct file_system_type *fs_type,
