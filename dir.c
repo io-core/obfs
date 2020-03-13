@@ -108,7 +108,7 @@ static int obfs_readdir(struct file *file, struct dir_context *ctx)
 		for ( ; p <= limit; p = obfs_next_entry(p, sbi)) {
 			const char *name;
 			__u32 inumber;
-			if (sbi->s_version == MINIX_V3) {
+			if (sbi->s_version == OBFS_V3) {
 				obfs3_dirent *de3 = (obfs3_dirent *)p;
 				name = de3->name;
 				inumber = de3->inode;
@@ -174,7 +174,7 @@ obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
 		kaddr = (char*)page_address(page);
 		limit = kaddr + obfs_last_byte(dir, n) - sbi->s_dirsize;
 		for (p = kaddr; p <= limit; p = obfs_next_entry(p, sbi)) {
-			if (sbi->s_version == MINIX_V3) {
+			if (sbi->s_version == OBFS_V3) {
 				obfs3_dirent *de3 = (obfs3_dirent *)p;
 				namx = de3->name;
 				inumber = de3->inode;
@@ -234,7 +234,7 @@ int obfs_add_link(struct dentry *dentry, struct inode *inode)
 		for (p = kaddr; p <= limit; p = obfs_next_entry(p, sbi)) {
 			de = (obfs_dirent *)p;
 			de3 = (obfs3_dirent *)p;
-			if (sbi->s_version == MINIX_V3) {
+			if (sbi->s_version == OBFS_V3) {
 				namx = de3->name;
 				inumber = de3->inode;
 		 	} else {
@@ -243,7 +243,7 @@ int obfs_add_link(struct dentry *dentry, struct inode *inode)
 			}
 			if (p == dir_end) {
 				/* We hit i_size */
-				if (sbi->s_version == MINIX_V3)
+				if (sbi->s_version == OBFS_V3)
 					de3->inode = 0;
 		 		else
 					de->inode = 0;
@@ -267,7 +267,7 @@ got_it:
 	if (err)
 		goto out_unlock;
 	memcpy (namx, name, namelen);
-	if (sbi->s_version == MINIX_V3) {
+	if (sbi->s_version == OBFS_V3) {
 		memset (namx + namelen, 0, sbi->s_dirsize - namelen - 4);
 		de3->inode = inode->i_ino;
 	} else {
@@ -298,7 +298,7 @@ int obfs_delete_entry(struct obfs_dir_entry *de, struct page *page)
 	lock_page(page);
 	err = obfs_prepare_chunk(page, pos, len);
 	if (err == 0) {
-		if (sbi->s_version == MINIX_V3)
+		if (sbi->s_version == OBFS_V3)
 			((obfs3_dirent *) de)->inode = 0;
 		else
 			de->inode = 0;
@@ -330,7 +330,7 @@ int obfs_make_empty(struct inode *inode, struct inode *dir)
 	kaddr = kmap_atomic(page);
 	memset(kaddr, 0, PAGE_SIZE);
 
-	if (sbi->s_version == MINIX_V3) {
+	if (sbi->s_version == OBFS_V3) {
 		obfs3_dirent *de3 = (obfs3_dirent *)kaddr;
 
 		de3->inode = inode->i_ino;
@@ -376,7 +376,7 @@ int obfs_empty_dir(struct inode * inode)
 		kaddr = (char *)page_address(page);
 		limit = kaddr + obfs_last_byte(inode, i) - sbi->s_dirsize;
 		for (p = kaddr; p <= limit; p = obfs_next_entry(p, sbi)) {
-			if (sbi->s_version == MINIX_V3) {
+			if (sbi->s_version == OBFS_V3) {
 				obfs3_dirent *de3 = (obfs3_dirent *)p;
 				name = de3->name;
 				inumber = de3->inode;
@@ -422,7 +422,7 @@ void obfs_set_link(struct obfs_dir_entry *de, struct page *page,
 
 	err = obfs_prepare_chunk(page, pos, sbi->s_dirsize);
 	if (err == 0) {
-		if (sbi->s_version == MINIX_V3)
+		if (sbi->s_version == OBFS_V3)
 			((obfs3_dirent *) de)->inode = inode->i_ino;
 		else
 			de->inode = inode->i_ino;
@@ -459,7 +459,7 @@ ino_t obfs_inode_by_name(struct dentry *dentry)
 		struct inode *inode = mapping->host;
 		struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
 
-		if (sbi->s_version == MINIX_V3)
+		if (sbi->s_version == OBFS_V3)
 			res = ((obfs3_dirent *) de)->inode;
 		else
 			res = de->inode;

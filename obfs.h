@@ -1,15 +1,15 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-#ifndef FS_MINIX_H
-#define FS_MINIX_H
+#ifndef OBFS_H
+#define OBFS_H
 
 #include <linux/fs.h>
 #include <linux/pagemap.h>
 #include "obfs_fs.h"
 
 #define INODE_VERSION(inode)	obfs_sb(inode->i_sb)->s_version
-#define MINIX_V1		0x0001		/* original obfs fs */
-#define MINIX_V2		0x0002		/* obfs V2 fs */
-#define MINIX_V3		0x0003		/* obfs V3 fs */
+#define OBFS_V1		0x0001		/* original obfs fs */
+#define OBFS_V2		0x0002		/* obfs V2 fs */
+#define OBFS_V3		0x0003		/* obfs V3 fs */
 
 /*
  * obfs fs inode data in memory
@@ -93,12 +93,12 @@ static inline unsigned obfs_blocks_needed(unsigned bits, unsigned blocksize)
 	return DIV_ROUND_UP(bits, blocksize * 8);
 }
 
-#if defined(CONFIG_MINIX_FS_NATIVE_ENDIAN) && \
-	defined(CONFIG_MINIX_FS_BIG_ENDIAN_16BIT_INDEXED)
+#if defined(CONFIG_OBFS_FS_NATIVE_ENDIAN) && \
+	defined(CONFIG_OBFS_FS_BIG_ENDIAN_16BIT_INDEXED)
 
 #error Minix file system byte order broken
 
-#elif defined(CONFIG_MINIX_FS_NATIVE_ENDIAN)
+#elif defined(CONFIG_OBFS_FS_NATIVE_ENDIAN)
 
 /*
  * big-endian 32 or 64 bit indexed bitmaps on big-endian system or
@@ -116,7 +116,7 @@ static inline unsigned obfs_blocks_needed(unsigned bits, unsigned blocksize)
 #define obfs_find_first_zero_bit(addr, size) \
 	find_first_zero_bit((unsigned long *)(addr), (size))
 
-#elif defined(CONFIG_MINIX_FS_BIG_ENDIAN_16BIT_INDEXED)
+#elif defined(CONFIG_OBFS_FS_BIG_ENDIAN_16BIT_INDEXED)
 
 /*
  * big-endian 16bit indexed bitmaps
@@ -167,4 +167,4 @@ static inline int obfs_test_bit(int nr, const void *vaddr)
 
 #endif
 
-#endif /* FS_MINIX_H */
+#endif /* OBFS_H */

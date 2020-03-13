@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
-#ifndef _LINUX_MINIX_FS_H
-#define _LINUX_MINIX_FS_H
+#ifndef _LINUX_OBFS_FS_H
+#define _LINUX_OBFS_FS_H
 
 #include <linux/types.h>
 #include <linux/magic.h>
@@ -15,18 +15,18 @@
  * pointers.
  */
 
-#define MINIX_ROOT_INO 1
+#define OBFS_ROOT_INO 1
 
 /* Not the same as the bogus LINK_MAX in <linux/limits.h>. Oh well. */
-#define MINIX_LINK_MAX	250
+#define OBFS_LINK_MAX	250
 #define MINIX2_LINK_MAX	65530
 
-#define MINIX_I_MAP_SLOTS	8
-#define MINIX_Z_MAP_SLOTS	64
-#define MINIX_VALID_FS		0x0001		/* Clean fs. */
-#define MINIX_ERROR_FS		0x0002		/* fs has errors. */
+#define OBFS_I_MAP_SLOTS	8
+#define OBFS_Z_MAP_SLOTS	64
+#define OBFS_VALID_FS		0x0001		/* Clean fs. */
+#define OBFS_ERROR_FS		0x0002		/* fs has errors. */
 
-#define MINIX_INODES_PER_BLOCK ((BLOCK_SIZE)/(sizeof (struct obfs_inode)))
+#define OBFS_INODES_PER_BLOCK ((BLOCK_SIZE)/(sizeof (struct obfs_inode)))
 
 /*
  * This is the original obfs inode layout on disk.

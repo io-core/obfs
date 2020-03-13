@@ -3,7 +3,7 @@
 # Makefile for the Linux obfs filesystem routines.
 #
 
-#obj-$(CONFIG_MINIX_FS) += minix.o
+#obj-$(CONFIG_OBFS_FS) += minix.o
 
 
 

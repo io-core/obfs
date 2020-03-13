@@ -117,14 +117,14 @@ obfs_V1_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 	}
 	ino--;
 	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks +
-		 ino / MINIX_INODES_PER_BLOCK;
+		 ino / OBFS_INODES_PER_BLOCK;
 	*bh = sb_bread(sb, block);
 	if (!*bh) {
 		printk("Unable to read inode block\n");
 		return NULL;
 	}
 	p = (void *)(*bh)->b_data;
-	return p + ino % MINIX_INODES_PER_BLOCK;
+	return p + ino % OBFS_INODES_PER_BLOCK;
 }
 
 struct obfs2_inode *
@@ -159,7 +159,7 @@ static void obfs_clear_inode(struct inode *inode)
 {
 	struct buffer_head *bh = NULL;
 
-	if (INODE_VERSION(inode) == MINIX_V1) {
+	if (INODE_VERSION(inode) == OBFS_V1) {
 		struct obfs_inode *raw_inode;
 		raw_inode = obfs_V1_raw_inode(inode->i_sb, inode->i_ino, &bh);
 		if (raw_inode) {

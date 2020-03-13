@@ -43,7 +43,7 @@ static void obfs_put_super(struct super_block *sb)
 	struct obfs_sb_info *sbi = obfs_sb(sb);
 
 	if (!sb_rdonly(sb)) {
-		if (sbi->s_version != MINIX_V3)	 /* s_state is now out from V3 sb */
+		if (sbi->s_version != OBFS_V3)	 /* s_state is now out from V3 sb */
 			sbi->s_ms->s_state = sbi->s_mount_state;
 		mark_buffer_dirty(sbi->s_sbh);
 	}
@@ -128,27 +128,27 @@ static int obfs_remount (struct super_block * sb, int * flags, char * data)
 	if ((bool)(*flags & SB_RDONLY) == sb_rdonly(sb))
 		return 0;
 	if (*flags & SB_RDONLY) {
-		if (ms->s_state & MINIX_VALID_FS ||
-		    !(sbi->s_mount_state & MINIX_VALID_FS))
+		if (ms->s_state & OBFS_VALID_FS ||
+		    !(sbi->s_mount_state & OBFS_VALID_FS))
 			return 0;
 		/* Mounting a rw partition read-only. */
-		if (sbi->s_version != MINIX_V3)
+		if (sbi->s_version != OBFS_V3)
 			ms->s_state = sbi->s_mount_state;
 		mark_buffer_dirty(sbi->s_sbh);
 	} else {
 	  	/* Mount a partition which is read-only, read-write. */
-		if (sbi->s_version != MINIX_V3) {
+		if (sbi->s_version != OBFS_V3) {
 			sbi->s_mount_state = ms->s_state;
-			ms->s_state &= ~MINIX_VALID_FS;
+			ms->s_state &= ~OBFS_VALID_FS;
 		} else {
-			sbi->s_mount_state = MINIX_VALID_FS;
+			sbi->s_mount_state = OBFS_VALID_FS;
 		}
 		mark_buffer_dirty(sbi->s_sbh);
 
-		if (!(sbi->s_mount_state & MINIX_VALID_FS))
+		if (!(sbi->s_mount_state & OBFS_VALID_FS))
 			printk("MINIX-fs warning: remounting unchecked fs, "
 				"running fsck is recommended\n");
-		else if ((sbi->s_mount_state & MINIX_ERROR_FS))
+		else if ((sbi->s_mount_state & OBFS_ERROR_FS))
 			printk("MINIX-fs warning: remounting fs with errors, "
 				"running fsck is recommended\n");
 	}
@@ -193,23 +193,23 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	sbi->s_max_size = ms->s_max_size;
 	s->s_magic = ms->s_magic;
 	if (s->s_magic == MINIX_SUPER_MAGIC) {
-		sbi->s_version = MINIX_V1;
+		sbi->s_version = OBFS_V1;
 		sbi->s_dirsize = 16;
 		sbi->s_namelen = 14;
-		s->s_max_links = MINIX_LINK_MAX;
+		s->s_max_links = OBFS_LINK_MAX;
 	} else if (s->s_magic == MINIX_SUPER_MAGIC2) {
-		sbi->s_version = MINIX_V1;
+		sbi->s_version = OBFS_V1;
 		sbi->s_dirsize = 32;
 		sbi->s_namelen = 30;
-		s->s_max_links = MINIX_LINK_MAX;
+		s->s_max_links = OBFS_LINK_MAX;
 	} else if (s->s_magic == MINIX2_SUPER_MAGIC) {
-		sbi->s_version = MINIX_V2;
+		sbi->s_version = OBFS_V2;
 		sbi->s_nzones = ms->s_zones;
 		sbi->s_dirsize = 16;
 		sbi->s_namelen = 14;
 		s->s_max_links = MINIX2_LINK_MAX;
 	} else if (s->s_magic == MINIX2_SUPER_MAGIC2) {
-		sbi->s_version = MINIX_V2;
+		sbi->s_version = OBFS_V2;
 		sbi->s_nzones = ms->s_zones;
 		sbi->s_dirsize = 32;
 		sbi->s_namelen = 30;
@@ -226,8 +226,8 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 		sbi->s_nzones = m3s->s_zones;
 		sbi->s_dirsize = 64;
 		sbi->s_namelen = 60;
-		sbi->s_version = MINIX_V3;
-		sbi->s_mount_state = MINIX_VALID_FS;
+		sbi->s_version = OBFS_V3;
+		sbi->s_mount_state = OBFS_VALID_FS;
 		sb_set_blocksize(s, m3s->s_blocksize);
 		s->s_max_links = MINIX2_LINK_MAX;
 	} else
@@ -282,7 +282,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 
 	/* set up enough so that it can read an inode */
 	s->s_op = &obfs_sops;
-	root_inode = obfs_iget(s, MINIX_ROOT_INO);
+	root_inode = obfs_iget(s, OBFS_ROOT_INO);
 	if (IS_ERR(root_inode)) {
 		ret = PTR_ERR(root_inode);
 		goto out_no_root;
@@ -294,14 +294,14 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 		goto out_no_root;
 
 	if (!sb_rdonly(s)) {
-		if (sbi->s_version != MINIX_V3) /* s_state is now out from V3 sb */
-			ms->s_state &= ~MINIX_VALID_FS;
+		if (sbi->s_version != OBFS_V3) /* s_state is now out from V3 sb */
+			ms->s_state &= ~OBFS_VALID_FS;
 		mark_buffer_dirty(bh);
 	}
-	if (!(sbi->s_mount_state & MINIX_VALID_FS))
+	if (!(sbi->s_mount_state & OBFS_VALID_FS))
 		printk("MINIX-fs: mounting unchecked file system, "
 			"running fsck is recommended\n");
-	else if (sbi->s_mount_state & MINIX_ERROR_FS)
+	else if (sbi->s_mount_state & OBFS_ERROR_FS)
 		printk("MINIX-fs: mounting file system with errors, "
 			"running fsck is recommended\n");
 
@@ -375,7 +375,7 @@ static int obfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 static int obfs_get_block(struct inode *inode, sector_t block,
 		    struct buffer_head *bh_result, int create)
 {
-	if (INODE_VERSION(inode) == MINIX_V1)
+	if (INODE_VERSION(inode) == OBFS_V1)
 		return V1_obfs_get_block(inode, block, bh_result, create);
 	else
 		return V2_obfs_get_block(inode, block, bh_result, create);
@@ -537,7 +537,7 @@ struct inode *obfs_iget(struct super_block *sb, unsigned long ino)
 	if (!(inode->i_state & I_NEW))
 		return inode;
 
-	if (INODE_VERSION(inode) == MINIX_V1)
+	if (INODE_VERSION(inode) == OBFS_V1)
 		return V1_obfs_iget(inode);
 	else
 		return V2_obfs_iget(inode);
@@ -604,7 +604,7 @@ static int obfs_write_inode(struct inode *inode, struct writeback_control *wbc)
 	int err = 0;
 	struct buffer_head *bh;
 
-	if (INODE_VERSION(inode) == MINIX_V1)
+	if (INODE_VERSION(inode) == OBFS_V1)
 		bh = V1_obfs_update_inode(inode);
 	else
 		bh = V2_obfs_update_inode(inode);
@@ -629,7 +629,7 @@ int obfs_getattr(const struct path *path, struct kstat *stat,
 	struct inode *inode = d_inode(path->dentry);
 
 	generic_fillattr(inode, stat);
-	if (INODE_VERSION(inode) == MINIX_V1)
+	if (INODE_VERSION(inode) == OBFS_V1)
 		stat->blocks = (BLOCK_SIZE / 512) * V1_obfs_blocks(stat->size, sb);
 	else
 		stat->blocks = (sb->s_blocksize / 512) * V2_obfs_blocks(stat->size, sb);
@@ -644,7 +644,7 @@ void obfs_truncate(struct inode * inode)
 {
 	if (!(S_ISREG(inode->i_mode) || S_ISDIR(inode->i_mode) || S_ISLNK(inode->i_mode)))
 		return;
-	if (INODE_VERSION(inode) == MINIX_V1)
+	if (INODE_VERSION(inode) == OBFS_V1)
 		V1_obfs_truncate(inode);
 	else
 		V2_obfs_truncate(inode);
