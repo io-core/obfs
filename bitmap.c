@@ -106,29 +106,6 @@ unsigned long obfs_count_free_blocks(struct super_block *sb)
 		<< sbi->s_log_zone_size);
 }
 
-//struct obfs_inode *
-//obfs_V1_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
-//{
-//	int block;
-//	struct obfs_sb_info *sbi = obfs_sb(sb);
-//	struct obfs_inode *p;
-//
-//	if (!ino || ino > sbi->s_ninodes) {
-//		printk("Bad inode number on dev %s: %ld is out of range\n",
-//		       sb->s_id, (long)ino);
-//		return NULL;
-//	}
-//	ino--;
-//	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks +
-//		 ino / OBFS_INODES_PER_BLOCK;
-//	*bh = sb_bread(sb, block);
-//	if (!*bh) {
-//		printk("Unable to read inode block\n");
-//		return NULL;
-//	}
-//	p = (void *)(*bh)->b_data;
-//	return p + ino % OBFS_INODES_PER_BLOCK;
-//}
 
 struct obfs2_inode *
 obfs_V2_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
@@ -162,21 +139,13 @@ static void obfs_clear_inode(struct inode *inode)
 {
 	struct buffer_head *bh = NULL;
 
-//	if (INODE_VERSION(inode) == OBFS_V1) {
-//		struct obfs_inode *raw_inode;
-//		raw_inode = obfs_V1_raw_inode(inode->i_sb, inode->i_ino, &bh);
-//		if (raw_inode) {
-//			raw_inode->i_nlinks = 0;
-//			raw_inode->i_mode = 0;
-//		}
-//	} else {
-		struct obfs2_inode *raw_inode;
-		raw_inode = obfs_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
-		if (raw_inode) {
-			raw_inode->i_nlinks = 0;
-			raw_inode->i_mode = 0;
-		}
-//	}
+	struct obfs2_inode *raw_inode;
+	raw_inode = obfs_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
+	if (raw_inode) {
+		raw_inode->i_nlinks = 0;
+		raw_inode->i_mode = 0;
+	}
+
 	if (bh) {
 		mark_buffer_dirty(bh);
 		brelse (bh);

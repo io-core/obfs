@@ -44,7 +44,6 @@ struct obfs_sb_info {
 };
 
 extern struct inode *obfs_iget(struct super_block *, unsigned long);
-extern struct obfs_inode * obfs_V1_raw_inode(struct super_block *, ino_t, struct buffer_head **);
 extern struct obfs2_inode * obfs_V2_raw_inode(struct super_block *, ino_t, struct buffer_head **);
 extern struct inode * obfs_new_inode(const struct inode *, umode_t, int *);
 extern void obfs_free_inode(struct inode * inode);
@@ -55,13 +54,10 @@ extern unsigned long obfs_count_free_blocks(struct super_block *sb);
 extern int obfs_getattr(const struct path *, struct kstat *, u32, unsigned int);
 extern int obfs_prepare_chunk(struct page *page, loff_t pos, unsigned len);
 
-extern void V1_obfs_truncate(struct inode *);
 extern void V2_obfs_truncate(struct inode *);
 extern void obfs_truncate(struct inode *);
 extern void obfs_set_inode(struct inode *, dev_t);
-extern int V1_obfs_get_block(struct inode *, long, struct buffer_head *, int);
 extern int V2_obfs_get_block(struct inode *, long, struct buffer_head *, int);
-extern unsigned V1_obfs_blocks(loff_t, struct super_block *);
 extern unsigned V2_obfs_blocks(loff_t, struct super_block *);
 
 extern struct obfs_dir_entry *obfs_find_entry(struct dentry*, struct page**);

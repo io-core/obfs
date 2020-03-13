@@ -13,7 +13,7 @@
 
 obj-m := obfs.o
 
-obfs-objs := bitmap.o itree_v1.o itree_v2.o namei.o inode.o file.o dir.o
+obfs-objs := bitmap.o itree_v2.o namei.o inode.o file.o dir.o
 
 
 #obj-m := iofs.o
