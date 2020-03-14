@@ -432,16 +432,16 @@ void obfs_set_inode(struct inode *inode, dev_t rdev)
 
 
 /*
- * The obfs V2 function to read an inode.
+ * The obfs function to read an inode.
  */
-static struct inode *V2_obfs_iget(struct inode *inode)
+static struct inode *do_obfs_iget(struct inode *inode)
 {
 	struct buffer_head * bh;
 	struct obfs2_inode * raw_inode;
 	struct obfs_inode_info *obfs_inode = obfs_i(inode);
 	int i;
 
-	raw_inode = obfs_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
+	raw_inode = obfs_get_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (!raw_inode) {
 		iget_failed(inode);
 		return ERR_PTR(-EIO);
@@ -479,7 +479,7 @@ struct inode *obfs_iget(struct super_block *sb, unsigned long ino)
 	if (!(inode->i_state & I_NEW))
 		return inode;
 
-	return V2_obfs_iget(inode);
+	return do_obfs_iget(inode);
 }
 
 
@@ -493,7 +493,7 @@ static struct buffer_head * V2_obfs_update_inode(struct inode * inode)
 	struct obfs_inode_info *obfs_inode = obfs_i(inode);
 	int i;
 
-	raw_inode = obfs_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
+	raw_inode = obfs_get_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (!raw_inode)
 		return NULL;
 	raw_inode->i_mode = inode->i_mode;

@@ -108,7 +108,7 @@ unsigned long obfs_count_free_blocks(struct super_block *sb)
 
 
 struct obfs2_inode *
-obfs_V2_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
+obfs_get_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 {
 	int block;
 	struct obfs_sb_info *sbi = obfs_sb(sb);
@@ -140,7 +140,7 @@ static void obfs_clear_inode(struct inode *inode)
 	struct buffer_head *bh = NULL;
 
 	struct obfs2_inode *raw_inode;
-	raw_inode = obfs_V2_raw_inode(inode->i_sb, inode->i_ino, &bh);
+	raw_inode = obfs_get_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (raw_inode) {
 		raw_inode->i_nlinks = 0;
 		raw_inode->i_mode = 0;
