@@ -8,25 +8,82 @@
 #include <linux/magic.h>
 
 /*
- * The obfs filesystem constants/structures
- */
-
-/*
- * Thanks to Kees J Bot for sending me the definitions of the new
- * obfs filesystem (aka V2) with bigger inodes and 32-bit block
- * pointers.
+ * The oberon filesystem constants/structures
  */
 
 #define OBFS_ROOT_INO 1
 
 /* Not the same as the bogus LINK_MAX in <linux/limits.h>. Oh well. */
-#define OBFS_LINK_MAX	250
+
+#define OBFS_VERSION "2013a"
+#define OBFS_DIRMARK 0x9B1EA38D
+#define OBFS_HEADERMARK 0x9BA71D86
+
+#define OBFS_ROOTINODE 29
+#define OBFS_BITMAPSIZE 8192
+#define OBFS_FNLENGTH 32
+#define OBFS_SECTABSIZE 64
+#define OBFS_EXTABSIZE 12
+#define OBFS_SECTORSIZE 1024
+#define OBFS_INDEXSIZE (OBFS_SECTORSIZE / 4)
+#define OBFS_HEADERSIZE 352
+#define OBFS_INDATASIZE (OBFS_SECTORSIZE - OBFS_HEADERSIZE)
+#define OBFS_SMALLFILELIMIT (OBFS_SECTORSIZE * OBFS_SECTABSIZE)
+#define OBFS_DIRROOTADR 29
+#define OBFS_DIRPGSIZE 24
+#define OBFS_FILLERSIZE 52
+#define OBFS_FILENAME_MAXLEN 63
+#define OBFS_BLOCKSIZE_BITS     10
+#define OBFS_BLOCKSIZE          (1 << OBFS_BLOCKSIZE_BITS)
+
 #define MINIX2_LINK_MAX	65530
 
 #define OBFS_I_MAP_SLOTS	8
 #define OBFS_Z_MAP_SLOTS	64
 #define OBFS_VALID_FS		0x0001		/* Clean fs. */
 #define OBFS_ERROR_FS		0x0002		/* fs has errors. */
+
+struct  obfs_de {  // directory entry B-tree node
+    char name[OBFS_FNLENGTH];
+    uint32_t  adr;       // sec no of file header
+    uint32_t  p;         // sec no of descendant in directory
+}__attribute__((packed));
+
+struct obfs_fh {    // file header
+    char name[OBFS_FNLENGTH];
+    uint32_t aleng;
+    uint32_t bleng;
+    uint32_t date;
+    uint32_t ext[OBFS_EXTABSIZE];                     // ExtensionTable
+    uint32_t sec[OBFS_SECTABSIZE];                    // SectorTable;
+    char fill[OBFS_SECTORSIZE - OBFS_HEADERSIZE];     // File Data
+}__attribute__((packed));
+
+struct obfs_dp {    // directory page
+    uint32_t m;
+    uint32_t p0;         //sec no of left descendant in directory
+    char fill[OBFS_FILLERSIZE];
+    struct obfs_de e[24];
+}__attribute__((packed));
+
+struct obfs_ep {    // extended page
+    uint32_t x[256];
+}__attribute__((packed));
+
+
+struct obfs_dir_record {
+    char filename[OBFS_FILENAME_MAXLEN];
+    uint64_t inode_no;
+}__attribute__((packed));
+
+struct obfs_dinode {
+    uint32_t origin;     // magic number on disk, inode type | sector number in memory
+    union {
+       struct obfs_fh fhb;
+       struct obfs_dp dirb;
+    };
+//    struct inode vfs_inode;
+}__attribute__((packed));
 
 
 /*
@@ -129,6 +186,11 @@ struct obfs_sb_info {
 	unsigned short s_mount_state;
 	unsigned short s_version;
 };
+
+#define BITSET(val,nbit)   ((val) |=  (1<<(nbit)))
+#define BITCLEAR(val,nbit) ((val) &= ~(1<<(nbit)))
+#define BITFLIP(val,nbit)  ((val) ^=  (1<<(nbit)))
+#define BITCHECK(val,nbit) ((val) &   (1<<(nbit)))
 
 extern struct inode *obfs_iget(struct super_block *, unsigned long);
 extern struct obfs2_inode * obfs_V2_raw_inode(struct super_block *, ino_t, struct buffer_head **);

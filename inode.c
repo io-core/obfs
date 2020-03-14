@@ -46,8 +46,6 @@ static void obfs_put_super(struct super_block *sb)
 	struct obfs_sb_info *sbi = obfs_sb(sb);
 
 	if (!sb_rdonly(sb)) {
-//		if (sbi->s_version != OBFS_V3)	 /* s_state is now out from V3 sb */
-//			sbi->s_ms->s_state = sbi->s_mount_state;
 		mark_buffer_dirty(sbi->s_sbh);
 	}
 	for (i = 0; i < sbi->s_imap_blocks; i++)
@@ -195,29 +193,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	sbi->s_log_zone_size = ms->s_log_zone_size;
 	sbi->s_max_size = ms->s_max_size;
 	s->s_magic = ms->s_magic;
-	if (s->s_magic == MINIX_SUPER_MAGIC) {
-		sbi->s_version = OBFS_V1;
-		sbi->s_dirsize = 16;
-		sbi->s_namelen = 14;
-		s->s_max_links = OBFS_LINK_MAX;
-	} else if (s->s_magic == MINIX_SUPER_MAGIC2) {
-		sbi->s_version = OBFS_V1;
-		sbi->s_dirsize = 32;
-		sbi->s_namelen = 30;
-		s->s_max_links = OBFS_LINK_MAX;
-	} else if (s->s_magic == MINIX2_SUPER_MAGIC) {
-		sbi->s_version = OBFS_V2;
-		sbi->s_nzones = ms->s_zones;
-		sbi->s_dirsize = 16;
-		sbi->s_namelen = 14;
-		s->s_max_links = MINIX2_LINK_MAX;
-	} else if (s->s_magic == MINIX2_SUPER_MAGIC2) {
-		sbi->s_version = OBFS_V2;
-		sbi->s_nzones = ms->s_zones;
-		sbi->s_dirsize = 32;
-		sbi->s_namelen = 30;
-		s->s_max_links = MINIX2_LINK_MAX;
-	} else if ( *(__u16 *)(bh->b_data + 24) == MINIX3_SUPER_MAGIC) {
+	if ( *(__u16 *)(bh->b_data + 24) == MINIX3_SUPER_MAGIC) {
 		m3s = (struct obfs3_super_block *) bh->b_data;
 		s->s_magic = m3s->s_magic;
 		sbi->s_imap_blocks = m3s->s_imap_blocks;
