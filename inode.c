@@ -154,8 +154,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 {
 	struct buffer_head *bh;
 	struct buffer_head **map;
-	struct obfs_super_block *ms;
-	struct obfs3_super_block *m3s = NULL;
+	struct obfs_dinode *ms;
 	unsigned long i, block;
 	struct inode *root_inode;
 	struct obfs_sb_info *sbi;
@@ -166,18 +165,22 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 		return -ENOMEM;
 	s->s_fs_info = sbi;
 
-//	BUILD_BUG_ON(32 != sizeof (struct obfs_inode));
-	BUILD_BUG_ON(64 != sizeof(struct obfs2_inode));
-
-	if (!sb_set_blocksize(s, BLOCK_SIZE))
+	if (!sb_set_blocksize(s, OBFS_BLOCKSIZE))
 		goto out_bad_hblock;
 
-	if (!(bh = sb_bread(s, 1)))
+	if (!(bh = sb_bread(s, (OBFS_ROOTINODE/29)-1)))
 		goto out_bad_sb;
 
-	ms = (struct obfs_super_block *) bh->b_data;
-	sbi->s_ms = ms;
-	sbi->s_sbh = bh;
+	ms = (struct obfs_dinode *) bh->b_data;
+//	sbi->s_ms = ms;
+//	sbi->s_sbh = bh;
+        if (ms->origin == OBFS_SUPER_MAGIC) {
+                s->s_magic = OBFS_SUPER_MAGIC;
+                sbi->s_mount_state = OBFS_VALID_FS;
+                s->s_max_links = 0;
+        } else
+                goto out_no_fs;
+/*
 	sbi->s_mount_state = ms->s_state;
 	sbi->s_ninodes = ms->s_ninodes;
 	sbi->s_nzones = ms->s_nzones;
@@ -205,6 +208,8 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 		s->s_max_links = OBFS_LINK_MAX;
 	} else
 		goto out_no_fs;
+*/
+
 
 	/*
 	 * Allocate the buffer map to keep the superblock small.
@@ -255,7 +260,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 
 	/* set up enough so that it can read an inode */
 	s->s_op = &obfs_sops;
-	root_inode = obfs_iget(s, OBFS_ROOT_INO);
+	root_inode = obfs_iget(s, OBFS_ROOTINODE);
 	if (IS_ERR(root_inode)) {
 		ret = PTR_ERR(root_inode);
 		goto out_no_root;
@@ -267,9 +272,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 		goto out_no_root;
 
 	if (!sb_rdonly(s)) {
-		if (sbi->s_version != OBFS_V3) /* s_state is now out from V3 sb */
-			ms->s_state &= ~OBFS_VALID_FS;
-		mark_buffer_dirty(bh);
+//		mark_buffer_dirty(bh);
 	}
 	if (!(sbi->s_mount_state & OBFS_VALID_FS))
 		printk("OBFS: mounting unchecked file system, "
