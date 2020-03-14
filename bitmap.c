@@ -107,30 +107,30 @@ unsigned long obfs_count_free_blocks(struct super_block *sb)
 }
 
 
-struct obfs2_inode *
+struct obfs_dinode *
 obfs_get_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 {
-	int block;
+//	int block;
 	struct obfs_sb_info *sbi = obfs_sb(sb);
-	struct obfs2_inode *p;
-	int obfs2_inodes_per_block = sb->s_blocksize / sizeof(struct obfs2_inode);
+	struct obfs_dinode *p;
+//	int obfs2_inodes_per_block = sb->s_blocksize / sizeof(struct obfs2_inode);
 
 	*bh = NULL;
-	if (!ino || ino > sbi->s_ninodes) {
-		printk("Bad inode number on dev %s: %ld is out of range\n",
+	if (!ino || ino % 29 != 0 ) {
+		printk("Bad inode number on dev %s: %ld is zero or not divisble by 29\n",
 		       sb->s_id, (long)ino);
 		return NULL;
 	}
-	ino--;
-	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks +
-		 ino / obfs2_inodes_per_block;
-	*bh = sb_bread(sb, block);
+//	ino--;
+//	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks +
+//		 ino / obfs2_inodes_per_block;
+	*bh = sb_bread(sb, (ino/29)-1);
 	if (!*bh) {
 		printk("Unable to read inode block\n");
 		return NULL;
 	}
 	p = (void *)(*bh)->b_data;
-	return p + ino % obfs2_inodes_per_block;
+	return p; // + ino % obfs2_inodes_per_block;
 }
 
 /* Clear the link count and mode of a deleted inode on disk. */
@@ -139,12 +139,12 @@ static void obfs_clear_inode(struct inode *inode)
 {
 	struct buffer_head *bh = NULL;
 
-	struct obfs2_inode *raw_inode;
+	struct obfs_dinode *raw_inode;
 	raw_inode = obfs_get_raw_inode(inode->i_sb, inode->i_ino, &bh);
-	if (raw_inode) {
-		raw_inode->i_nlinks = 0;
-		raw_inode->i_mode = 0;
-	}
+//	if (raw_inode) {
+//		raw_inode->i_nlinks = 0;
+//		raw_inode->i_mode = 0;
+//	}
 
 	if (bh) {
 		mark_buffer_dirty(bh);

@@ -192,7 +192,7 @@ struct obfs_sb_info {
 #define BITCHECK(val,nbit) ((val) &   (1<<(nbit)))
 
 extern struct inode *obfs_iget(struct super_block *, unsigned long);
-extern struct obfs2_inode * obfs_get_raw_inode(struct super_block *, ino_t, struct buffer_head **);
+extern struct obfs_dinode * obfs_get_raw_inode(struct super_block *, ino_t, struct buffer_head **);
 extern struct inode * obfs_new_inode(const struct inode *, umode_t, int *);
 extern void obfs_free_inode(struct inode * inode);
 extern unsigned long obfs_count_free_inodes(struct super_block *sb);

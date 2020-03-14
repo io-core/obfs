@@ -437,15 +437,38 @@ void obfs_set_inode(struct inode *inode, dev_t rdev)
 static struct inode *do_obfs_iget(struct inode *inode)
 {
 	struct buffer_head * bh;
-	struct obfs2_inode * raw_inode;
+	struct obfs_dinode * raw_inode;
 	struct obfs_inode_info *obfs_inode = obfs_i(inode);
 	int i;
+        uint32_t tv;
+        time_t t_of_day;
 
 	raw_inode = obfs_get_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (!raw_inode) {
 		iget_failed(inode);
 		return ERR_PTR(-EIO);
 	}
+
+        if (raw_inode->origin == OBFS_DIRMARK) {
+          inode->i_mode = 0040777; //octal
+        }else{
+          inode->i_mode = 0100777; //octal
+        }
+        tv = raw_inode->fhb.date;
+        //                  year        month             day                 
+        //                  hour        minute            second
+        t_of_day = mktime((uint32_t)((tv >> 26) & 0x3FF)+2000,  
+                 (tv >> 22) & 0xFF , (tv >> 18) & 0x1FF, (tv >> 12) & 0x1FF, ( tv >> 6) & 0x3FF, tv & 0x3FF);
+
+
+
+        inode->i_atime.tv_sec = t_of_day;
+        inode->i_mtime.tv_sec = t_of_day;
+        inode->i_ctime.tv_sec = t_of_day;
+        inode->i_atime.tv_nsec = inode->i_mtime.tv_nsec = inode->i_ctime.tv_nsec = 0;
+
+
+/*
 	inode->i_mode = raw_inode->i_mode;
 	i_uid_write(inode, raw_inode->i_uid);
 	i_gid_write(inode, raw_inode->i_gid);
@@ -461,6 +484,8 @@ static struct inode *do_obfs_iget(struct inode *inode)
 	for (i = 0; i < 10; i++)
 		obfs_inode->u.i2_data[i] = raw_inode->i_zone[i];
 	obfs_set_inode(inode, old_decode_dev(raw_inode->i_zone[0]));
+
+*/
 	brelse(bh);
 	unlock_new_inode(inode);
 	return inode;
@@ -489,13 +514,14 @@ struct inode *obfs_iget(struct super_block *sb, unsigned long ino)
 static struct buffer_head * V2_obfs_update_inode(struct inode * inode)
 {
 	struct buffer_head * bh;
-	struct obfs2_inode * raw_inode;
+	struct obfs_dinode * raw_inode;
 	struct obfs_inode_info *obfs_inode = obfs_i(inode);
 	int i;
 
 	raw_inode = obfs_get_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (!raw_inode)
 		return NULL;
+/*
 	raw_inode->i_mode = inode->i_mode;
 	raw_inode->i_uid = fs_high2lowuid(i_uid_read(inode));
 	raw_inode->i_gid = fs_high2lowgid(i_gid_read(inode));
@@ -508,6 +534,7 @@ static struct buffer_head * V2_obfs_update_inode(struct inode * inode)
 		raw_inode->i_zone[0] = old_encode_dev(inode->i_rdev);
 	else for (i = 0; i < 10; i++)
 		raw_inode->i_zone[i] = obfs_inode->u.i2_data[i];
+*/
 	mark_buffer_dirty(bh);
 	return bh;
 }
