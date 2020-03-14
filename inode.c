@@ -193,7 +193,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	sbi->s_log_zone_size = ms->s_log_zone_size;
 	sbi->s_max_size = ms->s_max_size;
 	s->s_magic = ms->s_magic;
-	if ( *(__u16 *)(bh->b_data + 24) == MINIX3_SUPER_MAGIC) {
+	if ( *(__u16 *)(bh->b_data + 24) == OBFS_SUPER_MAGIC) {
 		m3s = (struct obfs3_super_block *) bh->b_data;
 		s->s_magic = m3s->s_magic;
 		sbi->s_imap_blocks = m3s->s_imap_blocks;
@@ -208,7 +208,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 		sbi->s_version = OBFS_V3;
 		sbi->s_mount_state = OBFS_VALID_FS;
 		sb_set_blocksize(s, m3s->s_blocksize);
-		s->s_max_links = MINIX2_LINK_MAX;
+		s->s_max_links = OBFS_LINK_MAX;
 	} else
 		goto out_no_fs;
 

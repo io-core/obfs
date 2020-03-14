@@ -13,9 +13,8 @@
 
 #define OBFS_ROOT_INO 1
 
-/* Not the same as the bogus LINK_MAX in <linux/limits.h>. Oh well. */
-
 #define OBFS_VERSION "2013a"
+#define OBFS_SUPER_MAGIC 0x9B1EA38D
 #define OBFS_DIRMARK 0x9B1EA38D
 #define OBFS_HEADERMARK 0x9BA71D86
 
@@ -36,7 +35,7 @@
 #define OBFS_BLOCKSIZE_BITS     10
 #define OBFS_BLOCKSIZE          (1 << OBFS_BLOCKSIZE_BITS)
 
-#define MINIX2_LINK_MAX	65530
+#define OBFS_LINK_MAX	65530
 
 #define OBFS_I_MAP_SLOTS	8
 #define OBFS_Z_MAP_SLOTS	64
