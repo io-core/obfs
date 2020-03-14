@@ -44,10 +44,11 @@ static void obfs_put_super(struct super_block *sb)
 {
 	int i;
 	struct obfs_sb_info *sbi = obfs_sb(sb);
-
+/*
 	if (!sb_rdonly(sb)) {
 		mark_buffer_dirty(sbi->s_sbh);
 	}
+*/
 	for (i = 0; i < sbi->s_imap_blocks; i++)
 		brelse(sbi->s_imap[i]);
 	for (i = 0; i < sbi->s_zmap_blocks; i++)
@@ -122,29 +123,22 @@ static const struct super_operations obfs_sops = {
 static int obfs_remount (struct super_block * sb, int * flags, char * data)
 {
 	struct obfs_sb_info * sbi = obfs_sb(sb);
-	struct obfs_super_block * ms;
+	
 
 	sync_filesystem(sb);
-	ms = sbi->s_ms;
+	
 	if ((bool)(*flags & SB_RDONLY) == sb_rdonly(sb))
 		return 0;
 	if (*flags & SB_RDONLY) {
-		if (ms->s_state & OBFS_VALID_FS ||
-		    !(sbi->s_mount_state & OBFS_VALID_FS))
+		if ( !(sbi->s_mount_state & OBFS_VALID_FS))
 			return 0;
 		/* Mounting a rw partition read-only. */
-		if (sbi->s_version != OBFS_V3)
-			ms->s_state = sbi->s_mount_state;
-		mark_buffer_dirty(sbi->s_sbh);
+//		mark_buffer_dirty(sbi->s_sbh);
 	} else {
 	  	/* Mount a partition which is read-only, read-write. */
-		if (sbi->s_version != OBFS_V3) {
-			sbi->s_mount_state = ms->s_state;
-			ms->s_state &= ~OBFS_VALID_FS;
-		} else {
-			sbi->s_mount_state = OBFS_VALID_FS;
-		}
-		mark_buffer_dirty(sbi->s_sbh);
+		sbi->s_mount_state = OBFS_VALID_FS;
+		
+//		mark_buffer_dirty(sbi->s_sbh);
 
 		if (!(sbi->s_mount_state & OBFS_VALID_FS))
 			printk("OBFS warning: remounting unchecked fs, "
