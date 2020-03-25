@@ -20,16 +20,17 @@
 #include <linux/bitops.h>
 #include <linux/sched.h>
 
-static DEFINE_SPINLOCK(bitmap_lock);
+//static DEFINE_SPINLOCK(bitmap_lock);
 
 /*
  * bitmap consists of blocks filled with 16bit words
  * bit set == busy, bit clear == free
  * endianness is a mess, but for counting zero bits it really doesn't matter...
  */
-static __u32 count_free(struct buffer_head *map[], unsigned blocksize, __u32 numbits)
-{
+//static __u32 count_free(struct buffer_head *map[], unsigned blocksize, __u32 numbits)
+//{
 	__u32 sum = 0;
+/*
 	unsigned blocks = DIV_ROUND_UP(numbits, blocksize * 8);
 
 	while (blocks--) {
@@ -38,45 +39,47 @@ static __u32 count_free(struct buffer_head *map[], unsigned blocksize, __u32 num
 		while (words--)
 			sum += 16 - hweight16(*p++);
 	}
-
-	return sum;
-}
+*/
+//	return sum;
+//}
 
 void obfs_free_block(struct inode *inode, unsigned long block)
 {
-	struct super_block *sb = inode->i_sb;
-	struct obfs_sb_info *sbi = obfs_sb(sb);
-	struct buffer_head *bh;
-	int k = sb->s_blocksize_bits + 3;
-	unsigned long bit, zone;
+//	struct super_block *sb = inode->i_sb;
+//	struct obfs_sb_info *sbi = obfs_sb(sb);
+//	struct buffer_head *bh;
+//	int k = sb->s_blocksize_bits; // + 3;
+//	unsigned long bit, zone;
 
-	if (block < sbi->s_firstdatazone || block >= sbi->s_nzones) {
-		printk("Trying to free block not in datazone\n");
-		return;
-	}
-	zone = block - sbi->s_firstdatazone + 1;
-	bit = zone & ((1<<k) - 1);
-	zone >>= k;
+//	if (block < sbi->s_firstdatazone || block >= sbi->s_nzones) {
+//		printk("Trying to free block not in datazone\n");
+//		return;
+//	}
+//	zone = (block/29)-1; //block - sbi->s_firstdatazone + 1;
+//	bit = zone & ((1<<k) - 1);
+//	zone >>= k;
+/*
 	if (zone >= sbi->s_zmap_blocks) {
 		printk("obfs_free_block: nonexistent bitmap buffer\n");
 		return;
 	}
 	bh = sbi->s_zmap[zone];
-	spin_lock(&bitmap_lock);
-	if (!obfs_test_and_clear_bit(bit, bh->b_data))
-		printk("obfs_free_block (%s:%lu): bit already cleared\n",
-		       sb->s_id, block);
-	spin_unlock(&bitmap_lock);
-	mark_buffer_dirty(bh);
+*/
+//	spin_lock(&bitmap_lock);
+//	if (!obfs_test_and_clear_bit(bit, bh->b_data))
+//		printk("obfs_free_block (%s:%lu): bit already cleared\n",
+//		       sb->s_id, block);
+//	spin_unlock(&bitmap_lock);
+//	mark_buffer_dirty(bh);
 	return;
 }
 
 int obfs_new_block(struct inode * inode)
 {
-	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
-	int bits_per_zone = 8 * inode->i_sb->s_blocksize;
-	int i;
-
+//	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
+//	int bits_per_zone = 8 * inode->i_sb->s_blocksize;
+//	int i;
+/*
 	for (i = 0; i < sbi->s_zmap_blocks; i++) {
 		struct buffer_head *bh = sbi->s_zmap[i];
 		int j;
@@ -94,16 +97,20 @@ int obfs_new_block(struct inode * inode)
 		}
 		spin_unlock(&bitmap_lock);
 	}
+*/
 	return 0;
 }
 
 unsigned long obfs_count_free_blocks(struct super_block *sb)
 {
+/*
 	struct obfs_sb_info *sbi = obfs_sb(sb);
 	u32 bits = sbi->s_nzones - sbi->s_firstdatazone + 1;
 
 	return (count_free(sbi->s_zmap, sb->s_blocksize, bits)
 		<< sbi->s_log_zone_size);
+*/
+	return 0;
 }
 
 
@@ -111,7 +118,7 @@ struct obfs_dinode *
 obfs_get_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 {
 //	int block;
-	struct obfs_sb_info *sbi = obfs_sb(sb);
+//	struct obfs_sb_info *sbi = obfs_sb(sb);
 	struct obfs_dinode *p;
 //	int obfs2_inodes_per_block = sb->s_blocksize / sizeof(struct obfs2_inode);
 
@@ -156,7 +163,7 @@ void obfs_free_inode(struct inode * inode)
 {
 	struct super_block *sb = inode->i_sb;
 	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
-	struct buffer_head *bh;
+//	struct buffer_head *bh;
 	int k = sb->s_blocksize_bits + 3;
 	unsigned long ino, bit;
 
@@ -167,30 +174,33 @@ void obfs_free_inode(struct inode * inode)
 	}
 	bit = ino & ((1<<k) - 1);
 	ino >>= k;
+/*
 	if (ino >= sbi->s_imap_blocks) {
 		printk("obfs_free_inode: nonexistent imap in superblock\n");
 		return;
 	}
-
+*/
 	obfs_clear_inode(inode);	/* clear on-disk copy */
-
+/*
 	bh = sbi->s_imap[ino];
 	spin_lock(&bitmap_lock);
 	if (!obfs_test_and_clear_bit(bit, bh->b_data))
 		printk("obfs_free_inode: bit %lu already cleared\n", bit);
 	spin_unlock(&bitmap_lock);
 	mark_buffer_dirty(bh);
+*/
 }
+
 
 struct inode *obfs_new_inode(const struct inode *dir, umode_t mode, int *error)
 {
 	struct super_block *sb = dir->i_sb;
-	struct obfs_sb_info *sbi = obfs_sb(sb);
+//	struct obfs_sb_info *sbi = obfs_sb(sb);
 	struct inode *inode = new_inode(sb);
 	struct buffer_head * bh;
 	int bits_per_zone = 8 * sb->s_blocksize;
 	unsigned long j;
-	int i;
+//	int i;
 
 	if (!inode) {
 		*error = -ENOMEM;
@@ -199,7 +209,9 @@ struct inode *obfs_new_inode(const struct inode *dir, umode_t mode, int *error)
 	j = bits_per_zone;
 	bh = NULL;
 	*error = -ENOSPC;
+/*
 	spin_lock(&bitmap_lock);
+
 	for (i = 0; i < sbi->s_imap_blocks; i++) {
 		bh = sbi->s_imap[i];
 		j = obfs_find_first_zero_bit(bh->b_data, bits_per_zone);
@@ -211,7 +223,7 @@ struct inode *obfs_new_inode(const struct inode *dir, umode_t mode, int *error)
 		iput(inode);
 		return NULL;
 	}
-	if (obfs_test_and_set_bit(j, bh->b_data)) {	/* shouldn't happen */
+	if (obfs_test_and_set_bit(j, bh->b_data)) {	// shouldn't happen 
 		spin_unlock(&bitmap_lock);
 		printk("obfs_new_inode: bit already set\n");
 		iput(inode);
@@ -224,6 +236,7 @@ struct inode *obfs_new_inode(const struct inode *dir, umode_t mode, int *error)
 		iput(inode);
 		return NULL;
 	}
+*/
 	inode_init_owner(inode, dir, mode);
 	inode->i_ino = j;
 	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
@@ -238,8 +251,9 @@ struct inode *obfs_new_inode(const struct inode *dir, umode_t mode, int *error)
 
 unsigned long obfs_count_free_inodes(struct super_block *sb)
 {
-	struct obfs_sb_info *sbi = obfs_sb(sb);
-	u32 bits = sbi->s_ninodes + 1;
+//	struct obfs_sb_info *sbi = obfs_sb(sb);
+//	u32 bits = sbi->s_ninodes + 1;
 
-	return count_free(sbi->s_imap, sb->s_blocksize, bits);
+//	return count_free(sbi->s_imap, sb->s_blocksize, bits);
+	return 0;
 }

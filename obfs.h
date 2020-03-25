@@ -42,6 +42,10 @@
 #define OBFS_VALID_FS		0x0001		/* Clean fs. */
 #define OBFS_ERROR_FS		0x0002		/* fs has errors. */
 
+struct iofs_bm { // bitmap for 65536 sectors = 64MB maximum volume size
+    uint32_t s[2048];
+}__attribute__((packed));
+
 struct  obfs_de {  // directory entry B-tree node
     char name[OBFS_FNLENGTH];
     uint32_t  adr;       // sec no of file header
@@ -171,15 +175,15 @@ struct obfs_inode_info {
 struct obfs_sb_info {
 	unsigned long s_ninodes;
 	unsigned long s_nzones;
-	unsigned long s_imap_blocks;
-	unsigned long s_zmap_blocks;
+//	unsigned long s_imap_blocks;
+//	unsigned long s_zmap_blocks;
 	unsigned long s_firstdatazone;
 	unsigned long s_log_zone_size;
 	unsigned long s_max_size;
 	int s_dirsize;
 	int s_namelen;
-	struct buffer_head ** s_imap;
-	struct buffer_head ** s_zmap;
+	struct iofs_bm * s_map;
+//	struct buffer_head ** s_zmap;
 	struct buffer_head * s_sbh;
 	struct obfs_super_block * s_ms;
 	unsigned short s_mount_state;

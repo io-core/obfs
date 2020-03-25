@@ -48,13 +48,14 @@ static void obfs_put_super(struct super_block *sb)
 	if (!sb_rdonly(sb)) {
 		mark_buffer_dirty(sbi->s_sbh);
 	}
-*/
+
 	for (i = 0; i < sbi->s_imap_blocks; i++)
 		brelse(sbi->s_imap[i]);
 	for (i = 0; i < sbi->s_zmap_blocks; i++)
 		brelse(sbi->s_zmap[i]);
+*/
 	brelse (sbi->s_sbh);
-	kfree(sbi->s_imap);
+	kfree(sbi->s_map);
 	sb->s_fs_info = NULL;
 	kfree(sbi);
 }
@@ -153,7 +154,7 @@ static int obfs_remount (struct super_block * sb, int * flags, char * data)
 static int obfs_fill_super(struct super_block *s, void *data, int silent)
 {
 	struct buffer_head *bh;
-	struct buffer_head **map;
+	struct iofs_bm *map; //struct buffer_head **map;
 	struct obfs_dinode *ms;
 	unsigned long i, block;
 	struct inode *root_inode;
@@ -180,6 +181,10 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
                 s->s_max_links = 0;
         } else
                 goto out_no_fs;
+//        sbi->s_imap_blocks = 8; // 65536 sectors / 8 bits per byte = 8192 = 8 x 1k blocks
+
+
+
 /*
 	sbi->s_mount_state = ms->s_state;
 	sbi->s_ninodes = ms->s_ninodes;
@@ -214,49 +219,58 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	/*
 	 * Allocate the buffer map to keep the superblock small.
 	 */
-	if (sbi->s_imap_blocks == 0 || sbi->s_zmap_blocks == 0)
-		goto out_illegal_sb;
-	i = (sbi->s_imap_blocks + sbi->s_zmap_blocks) * sizeof(bh);
-	map = kzalloc(i, GFP_KERNEL);
+//	if (sbi->s_imap_blocks == 0 ) // || sbi->s_zmap_blocks == 0)
+//		goto out_illegal_sb;
+//	i = sbi->s_imap_blocks * sizeof(bh);  // + sbi->s_zmap_blocks) * sizeof(bh);
+
+ 	map = kzalloc(sizeof(struct iofs_bm), GFP_KERNEL);
 	if (!map)
 		goto out_no_map;
-	sbi->s_imap = &map[0];
-	sbi->s_zmap = &map[sbi->s_imap_blocks];
+	map->s[0]=~(uint32_t)0;
+        map->s[1]=~(uint32_t)0;
 
-	block=2;
-	for (i=0 ; i < sbi->s_imap_blocks ; i++) {
-		if (!(sbi->s_imap[i]=sb_bread(s, block)))
-			goto out_no_bitmap;
-		block++;
-	}
-	for (i=0 ; i < sbi->s_zmap_blocks ; i++) {
-		if (!(sbi->s_zmap[i]=sb_bread(s, block)))
-			goto out_no_bitmap;
-		block++;
-	}
 
-	obfs_set_bit(0,sbi->s_imap[0]->b_data);
-	obfs_set_bit(0,sbi->s_zmap[0]->b_data);
+
+
+
+
+	sbi->s_map = map;
+//	sbi->s_zmap = &map[sbi->s_imap_blocks];
+
+//	block=2;
+//	for (i=0 ; i < sbi->s_imap_blocks ; i++) {
+//		if (!(sbi->s_imap[i]=sb_bread(s, block)))
+//			goto out_no_bitmap;
+//		block++;
+//	}
+//	for (i=0 ; i < sbi->s_zmap_blocks ; i++) {
+//		if (!(sbi->s_zmap[i]=sb_bread(s, block)))
+//			goto out_no_bitmap;
+//		block++;
+//	}
+
+//	obfs_set_bit(0,sbi->s_imap[0]->b_data);
+//	obfs_set_bit(0,sbi->s_zmap[0]->b_data);
 
 	/* Apparently obfs can create filesystems that allocate more blocks for
 	 * the bitmaps than needed.  We simply ignore that, but verify it didn't
 	 * create one with not enough blocks and bail out if so.
 	 */
-	block = obfs_blocks_needed(sbi->s_ninodes, s->s_blocksize);
-	if (sbi->s_imap_blocks < block) {
-		printk("OBFS: file system does not have enough "
-				"imap blocks allocated.  Refusing to mount.\n");
-		goto out_no_bitmap;
-	}
+//	block = obfs_blocks_needed(sbi->s_ninodes, s->s_blocksize);
+//	if (sbi->s_imap_blocks < block) {
+//		printk("OBFS: file system does not have enough "
+//				"imap blocks allocated.  Refusing to mount.\n");
+//		goto out_no_bitmap;
+//	}
 
-	block = obfs_blocks_needed(
-			(sbi->s_nzones - sbi->s_firstdatazone + 1),
-			s->s_blocksize);
-	if (sbi->s_zmap_blocks < block) {
-		printk("OBFS: file system does not have enough "
-				"zmap blocks allocated.  Refusing to mount.\n");
-		goto out_no_bitmap;
-	}
+//	block = obfs_blocks_needed(
+//			(sbi->s_nzones - sbi->s_firstdatazone + 1),
+//			s->s_blocksize);
+//	if (sbi->s_zmap_blocks < block) {
+//		printk("OBFS: file system does not have enough "
+//				"zmap blocks allocated.  Refusing to mount.\n");
+//		goto out_no_bitmap;
+//	}
 
 	/* set up enough so that it can read an inode */
 	s->s_op = &obfs_sops;
@@ -291,11 +305,11 @@ out_no_root:
 out_no_bitmap:
 	printk("OBFS: bad superblock or unable to read bitmaps\n");
 out_freemap:
-	for (i = 0; i < sbi->s_imap_blocks; i++)
-		brelse(sbi->s_imap[i]);
-	for (i = 0; i < sbi->s_zmap_blocks; i++)
-		brelse(sbi->s_zmap[i]);
-	kfree(sbi->s_imap);
+//	for (i = 0; i < sbi->s_imap_blocks; i++)
+//		brelse(sbi->s_imap[i]);
+//	for (i = 0; i < sbi->s_zmap_blocks; i++)
+//		brelse(sbi->s_zmap[i]);
+	kfree(sbi->s_map);
 	goto out_release;
 
 out_no_map:
@@ -311,7 +325,7 @@ out_illegal_sb:
 
 out_no_fs:
 	if (!silent)
-		printk("VFS: Can't find a Minix filesystem V1 | V2 | V3 "
+		printk("VFS: Can't find an Oberon filesystem"
 		       "on device %s.\n", s->s_id);
 out_release:
 	brelse(bh);
