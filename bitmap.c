@@ -8,10 +8,6 @@
  *      Project Oberon fs support.
  */
 
-/*
- * Modified for 680x0 by Hamish Macdonald
- * Fixed for 680x0 by Andreas Schwab
- */
 
 /* bitmap.c contains the code that handles the inode and block bitmaps */
 
