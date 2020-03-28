@@ -37,19 +37,19 @@ void obfs_free_block(struct inode *inode, unsigned long block)
 {
 	struct super_block *sb = inode->i_sb;
 	struct obfs_sb_info *sbi = obfs_sb(sb);
-        uint32_t iino;
+        
 
-        iino=block/29;
-	if (iino < 1 || iino > 65535) {
+        
+	if (block < 1 || block > 65535) {
 		printk("Trying to free block beyond range of Oberon filesystem\n");
 		return;
 	}
 	spin_lock(&bitmap_lock);
-	if (BITCHECK(sbi->s_map->s[iino/32],iino%32))
+	if (BITCHECK(sbi->s_map->s[block/32],block%32))
                 printk("Block already free on dev %s: %ld\n",
                        sb->s_id, (long)block);
 	else
-          BITCLEAR(sbi->s_map->s[iino/32],iino%32); 
+          BITCLEAR(sbi->s_map->s[block/32],block%32); 
 	spin_unlock(&bitmap_lock);
 
 	return;
@@ -75,12 +75,6 @@ unsigned long obfs_count_free_blocks(struct super_block *sb)
 {
 
 	struct obfs_sb_info *sbi = obfs_sb(sb);
-/*
-	u32 bits = sbi->s_nzones - sbi->s_firstdatazone + 1;
-
-	return (count_free(sbi->s_zmap, sb->s_blocksize, bits)
-		<< sbi->s_log_zone_size);
-*/
 	return count_free(sbi->s_map);
 }
 
@@ -88,10 +82,7 @@ unsigned long obfs_count_free_blocks(struct super_block *sb)
 struct obfs_dinode *
 obfs_get_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 {
-//	int block;
-//	struct obfs_sb_info *sbi = obfs_sb(sb);
 	struct obfs_dinode *p;
-//	int obfs2_inodes_per_block = sb->s_blocksize / sizeof(struct obfs2_inode);
 
 	*bh = NULL;
 	if (!ino || ino % 29 != 0 ) {
@@ -99,16 +90,13 @@ obfs_get_raw_inode(struct super_block *sb, ino_t ino, struct buffer_head **bh)
 		       sb->s_id, (long)ino);
 		return NULL;
 	}
-//	ino--;
-//	block = 2 + sbi->s_imap_blocks + sbi->s_zmap_blocks +
-//		 ino / obfs2_inodes_per_block;
 	*bh = sb_bread(sb, (ino/29)-1);
 	if (!*bh) {
 		printk("Unable to read inode block\n");
 		return NULL;
 	}
 	p = (void *)(*bh)->b_data;
-	return p; // + ino % obfs2_inodes_per_block;
+	return p; 
 }
 
 /* Clear the link count and mode of a deleted inode on disk. */
@@ -134,32 +122,24 @@ void obfs_free_inode(struct inode * inode)
 {
 	struct super_block *sb = inode->i_sb;
 	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
-//	struct buffer_head *bh;
-	int k = sb->s_blocksize_bits + 3;
-	unsigned long ino, bit;
+	unsigned long block;
 
-	ino = inode->i_ino;
-	if (ino < 1 || ino > sbi->s_ninodes) {
+	block = inode->i_ino/29;
+	if (block < 1 || block > 65535 || inode->i_ino % 29 != 0) {
 		printk("obfs_free_inode: inode 0 or nonexistent inode\n");
 		return;
 	}
-	bit = ino & ((1<<k) - 1);
-	ino >>= k;
-/*
-	if (ino >= sbi->s_imap_blocks) {
-		printk("obfs_free_inode: nonexistent imap in superblock\n");
-		return;
-	}
-*/
+
 	obfs_clear_inode(inode);	/* clear on-disk copy */
-/*
-	bh = sbi->s_imap[ino];
+
 	spin_lock(&bitmap_lock);
-	if (!obfs_test_and_clear_bit(bit, bh->b_data))
-		printk("obfs_free_inode: bit %lu already cleared\n", bit);
+        if (BITCHECK(sbi->s_map->s[block/32],block%32))
+                printk("Block already free on dev %s: %ld\n",
+                       sb->s_id, (long)block);
+        else
+          BITCLEAR(sbi->s_map->s[block/32],block%32);
 	spin_unlock(&bitmap_lock);
-	mark_buffer_dirty(bh);
-*/
+
 }
 
 
