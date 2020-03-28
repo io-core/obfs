@@ -180,9 +180,6 @@ struct inode *obfs_new_inode(const struct inode *dir, umode_t mode, int *error)
 
 unsigned long obfs_count_free_inodes(struct super_block *sb)
 {
-//	struct obfs_sb_info *sbi = obfs_sb(sb);
-//	u32 bits = sbi->s_ninodes + 1;
-
-//	return count_free(sbi->s_imap, sb->s_blocksize, bits);
-	return 0;
+        struct obfs_sb_info *sbi = obfs_sb(sb);
+        return count_free(sbi->s_map);
 }
