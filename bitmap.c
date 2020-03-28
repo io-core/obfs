@@ -146,10 +146,8 @@ void obfs_free_inode(struct inode * inode)
 struct inode *obfs_new_inode(const struct inode *dir, umode_t mode, int *error)
 {
 	struct super_block *sb = dir->i_sb;
-//	struct obfs_sb_info *sbi = obfs_sb(sb);
+	struct obfs_sb_info *sbi = obfs_sb(sb);
 	struct inode *inode = new_inode(sb);
-	struct buffer_head * bh;
-	int bits_per_zone = 8 * sb->s_blocksize;
 	unsigned long j;
 //	int i;
 
@@ -157,37 +155,21 @@ struct inode *obfs_new_inode(const struct inode *dir, umode_t mode, int *error)
 		*error = -ENOMEM;
 		return NULL;
 	}
-	j = bits_per_zone;
-	bh = NULL;
 	*error = -ENOSPC;
-/*
+
 	spin_lock(&bitmap_lock);
 
-	for (i = 0; i < sbi->s_imap_blocks; i++) {
-		bh = sbi->s_imap[i];
-		j = obfs_find_first_zero_bit(bh->b_data, bits_per_zone);
-		if (j < bits_per_zone)
-			break;
-	}
-	if (!bh || j >= bits_per_zone) {
+        j = obfs_find_first_zero_bit(sbi->s_map, 65536/8);
+        if (j < 65536/8) {
+                BITSET(sbi->s_map->s[j/32],j%32);
+        }else{
 		spin_unlock(&bitmap_lock);
-		iput(inode);
-		return NULL;
-	}
-	if (obfs_test_and_set_bit(j, bh->b_data)) {	// shouldn't happen 
-		spin_unlock(&bitmap_lock);
-		printk("obfs_new_inode: bit already set\n");
-		iput(inode);
 		return NULL;
 	}
 	spin_unlock(&bitmap_lock);
-	mark_buffer_dirty(bh);
-	j += i * bits_per_zone;
-	if (!j || j > sbi->s_ninodes) {
-		iput(inode);
-		return NULL;
-	}
-*/
+
+//	TODO: Actually load and initialize the inode on-disk block
+
 	inode_init_owner(inode, dir, mode);
 	inode->i_ino = j;
 	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
