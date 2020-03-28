@@ -42,18 +42,8 @@ static void obfs_evict_inode(struct inode *inode)
 
 static void obfs_put_super(struct super_block *sb)
 {
-	int i;
+//	int i;
 	struct obfs_sb_info *sbi = obfs_sb(sb);
-/*
-	if (!sb_rdonly(sb)) {
-		mark_buffer_dirty(sbi->s_sbh);
-	}
-
-	for (i = 0; i < sbi->s_imap_blocks; i++)
-		brelse(sbi->s_imap[i]);
-	for (i = 0; i < sbi->s_zmap_blocks; i++)
-		brelse(sbi->s_zmap[i]);
-*/
 	brelse (sbi->s_sbh);
 	kfree(sbi->s_map);
 	sb->s_fs_info = NULL;
@@ -156,7 +146,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	struct buffer_head *bh;
 	struct iofs_bm *map; //struct buffer_head **map;
 	struct obfs_dinode *ms;
-	unsigned long i, block;
+//	unsigned long i, block;
 	struct inode *root_inode;
 	struct obfs_sb_info *sbi;
 	int ret = -EINVAL;
@@ -216,61 +206,14 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 */
 
 
-	/*
-	 * Allocate the buffer map to keep the superblock small.
-	 */
-//	if (sbi->s_imap_blocks == 0 ) // || sbi->s_zmap_blocks == 0)
-//		goto out_illegal_sb;
-//	i = sbi->s_imap_blocks * sizeof(bh);  // + sbi->s_zmap_blocks) * sizeof(bh);
 
  	map = kzalloc(sizeof(struct iofs_bm), GFP_KERNEL);
 	if (!map)
 		goto out_no_map;
 	map->s[0]=~(uint32_t)0;
         map->s[1]=~(uint32_t)0;
-
-
-
-
-
-
 	sbi->s_map = map;
-//	sbi->s_zmap = &map[sbi->s_imap_blocks];
 
-//	block=2;
-//	for (i=0 ; i < sbi->s_imap_blocks ; i++) {
-//		if (!(sbi->s_imap[i]=sb_bread(s, block)))
-//			goto out_no_bitmap;
-//		block++;
-//	}
-//	for (i=0 ; i < sbi->s_zmap_blocks ; i++) {
-//		if (!(sbi->s_zmap[i]=sb_bread(s, block)))
-//			goto out_no_bitmap;
-//		block++;
-//	}
-
-//	obfs_set_bit(0,sbi->s_imap[0]->b_data);
-//	obfs_set_bit(0,sbi->s_zmap[0]->b_data);
-
-	/* Apparently obfs can create filesystems that allocate more blocks for
-	 * the bitmaps than needed.  We simply ignore that, but verify it didn't
-	 * create one with not enough blocks and bail out if so.
-	 */
-//	block = obfs_blocks_needed(sbi->s_ninodes, s->s_blocksize);
-//	if (sbi->s_imap_blocks < block) {
-//		printk("OBFS: file system does not have enough "
-//				"imap blocks allocated.  Refusing to mount.\n");
-//		goto out_no_bitmap;
-//	}
-
-//	block = obfs_blocks_needed(
-//			(sbi->s_nzones - sbi->s_firstdatazone + 1),
-//			s->s_blocksize);
-//	if (sbi->s_zmap_blocks < block) {
-//		printk("OBFS: file system does not have enough "
-//				"zmap blocks allocated.  Refusing to mount.\n");
-//		goto out_no_bitmap;
-//	}
 
 	/* set up enough so that it can read an inode */
 	s->s_op = &obfs_sops;
@@ -302,13 +245,9 @@ out_no_root:
 		printk("OBFS: get root inode failed\n");
 	goto out_freemap;
 
-out_no_bitmap:
-	printk("OBFS: bad superblock or unable to read bitmaps\n");
+//out_no_bitmap:
+//	printk("OBFS: bad superblock or unable to read bitmaps\n");
 out_freemap:
-//	for (i = 0; i < sbi->s_imap_blocks; i++)
-//		brelse(sbi->s_imap[i]);
-//	for (i = 0; i < sbi->s_zmap_blocks; i++)
-//		brelse(sbi->s_zmap[i]);
 	kfree(sbi->s_map);
 	goto out_release;
 
@@ -318,10 +257,10 @@ out_no_map:
 		printk("OBFS: can't allocate map\n");
 	goto out_release;
 
-out_illegal_sb:
-	if (!silent)
-		printk("OBFS: bad superblock\n");
-	goto out_release;
+//out_illegal_sb:
+//	if (!silent)
+//		printk("OBFS: bad superblock\n");
+//	goto out_release;
 
 out_no_fs:
 	if (!silent)
@@ -452,8 +391,8 @@ static struct inode *do_obfs_iget(struct inode *inode)
 {
 	struct buffer_head * bh;
 	struct obfs_dinode * raw_inode;
-	struct obfs_inode_info *obfs_inode = obfs_i(inode);
-	int i;
+//	struct obfs_inode_info *obfs_inode = obfs_i(inode);
+//	int i;
         uint32_t tv;
         time_t t_of_day;
 
@@ -523,14 +462,14 @@ struct inode *obfs_iget(struct super_block *sb, unsigned long ino)
 
 
 /*
- * The obfs V2 function to synchronize an inode.
+ * The obfs function to synchronize an inode.
  */
 static struct buffer_head * V2_obfs_update_inode(struct inode * inode)
 {
 	struct buffer_head * bh;
 	struct obfs_dinode * raw_inode;
-	struct obfs_inode_info *obfs_inode = obfs_i(inode);
-	int i;
+//	struct obfs_inode_info *obfs_inode = obfs_i(inode);
+//	int i;
 
 	raw_inode = obfs_get_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (!raw_inode)
