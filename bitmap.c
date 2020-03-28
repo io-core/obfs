@@ -20,97 +20,68 @@
 #include <linux/bitops.h>
 #include <linux/sched.h>
 
-//static DEFINE_SPINLOCK(bitmap_lock);
+static DEFINE_SPINLOCK(bitmap_lock);
 
 /*
- * bitmap consists of blocks filled with 16bit words
+ * bitmap consists of 8k of memory filled with 32bit words
  * bit set == busy, bit clear == free
- * endianness is a mess, but for counting zero bits it really doesn't matter...
  */
-//static __u32 count_free(struct buffer_head *map[], unsigned blocksize, __u32 numbits)
-//{
-	__u32 sum = 0;
-/*
-	unsigned blocks = DIV_ROUND_UP(numbits, blocksize * 8);
-
-	while (blocks--) {
-		unsigned words = blocksize / 2;
-		__u16 *p = (__u16 *)(*map++)->b_data;
-		while (words--)
-			sum += 16 - hweight16(*p++);
-	}
-*/
-//	return sum;
-//}
+static __u32 count_free(struct iofs_bm *map)
+{
+        int i,a = 0;
+        for(i=0;i<2048;i++){ a += hweight_long(map->s[i]);}
+	return 65536-a;
+}
 
 void obfs_free_block(struct inode *inode, unsigned long block)
 {
-//	struct super_block *sb = inode->i_sb;
-//	struct obfs_sb_info *sbi = obfs_sb(sb);
-//	struct buffer_head *bh;
-//	int k = sb->s_blocksize_bits; // + 3;
-//	unsigned long bit, zone;
+	struct super_block *sb = inode->i_sb;
+	struct obfs_sb_info *sbi = obfs_sb(sb);
+        uint32_t iino;
 
-//	if (block < sbi->s_firstdatazone || block >= sbi->s_nzones) {
-//		printk("Trying to free block not in datazone\n");
-//		return;
-//	}
-//	zone = (block/29)-1; //block - sbi->s_firstdatazone + 1;
-//	bit = zone & ((1<<k) - 1);
-//	zone >>= k;
-/*
-	if (zone >= sbi->s_zmap_blocks) {
-		printk("obfs_free_block: nonexistent bitmap buffer\n");
+        iino=block/29;
+	if (iino < 1 || iino > 65535) {
+		printk("Trying to free block beyond range of Oberon filesystem\n");
 		return;
 	}
-	bh = sbi->s_zmap[zone];
-*/
-//	spin_lock(&bitmap_lock);
-//	if (!obfs_test_and_clear_bit(bit, bh->b_data))
-//		printk("obfs_free_block (%s:%lu): bit already cleared\n",
-//		       sb->s_id, block);
-//	spin_unlock(&bitmap_lock);
-//	mark_buffer_dirty(bh);
+	spin_lock(&bitmap_lock);
+	if (BITCHECK(sbi->s_map->s[iino/32],iino%32))
+                printk("Block already free on dev %s: %ld\n",
+                       sb->s_id, (long)block);
+	else
+          BITCLEAR(sbi->s_map->s[iino/32],iino%32); 
+	spin_unlock(&bitmap_lock);
+
 	return;
 }
 
 int obfs_new_block(struct inode * inode)
 {
-//	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
-//	int bits_per_zone = 8 * inode->i_sb->s_blocksize;
-//	int i;
-/*
-	for (i = 0; i < sbi->s_zmap_blocks; i++) {
-		struct buffer_head *bh = sbi->s_zmap[i];
-		int j;
+	struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
+	int j;
 
-		spin_lock(&bitmap_lock);
-		j = obfs_find_first_zero_bit(bh->b_data, bits_per_zone);
-		if (j < bits_per_zone) {
-			obfs_set_bit(j, bh->b_data);
-			spin_unlock(&bitmap_lock);
-			mark_buffer_dirty(bh);
-			j += i * bits_per_zone + sbi->s_firstdatazone-1;
-			if (j < sbi->s_firstdatazone || j >= sbi->s_nzones)
-				break;
-			return j;
-		}
+	spin_lock(&bitmap_lock);
+	j = obfs_find_first_zero_bit(sbi->s_map, 65536/8);
+	if (j < 65536/8) {
+		BITSET(sbi->s_map->s[j/32],j%32);
 		spin_unlock(&bitmap_lock);
+		return j;
 	}
-*/
+	spin_unlock(&bitmap_lock);
 	return 0;
 }
 
 unsigned long obfs_count_free_blocks(struct super_block *sb)
 {
-/*
+
 	struct obfs_sb_info *sbi = obfs_sb(sb);
+/*
 	u32 bits = sbi->s_nzones - sbi->s_firstdatazone + 1;
 
 	return (count_free(sbi->s_zmap, sb->s_blocksize, bits)
 		<< sbi->s_log_zone_size);
 */
-	return 0;
+	return count_free(sbi->s_map);
 }
 
 
