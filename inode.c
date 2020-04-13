@@ -22,6 +22,17 @@
 #include <linux/vfs.h>
 #include <linux/writeback.h>
 
+static DECLARE_COMPLETION(thread_done);
+
+struct task_struct *kthread;
+
+static int thread_func(void* data)
+{
+    printk("In %s function\n", __func__);
+    return 0;
+}
+
+
 static int obfs_write_inode(struct inode *inode,
 		struct writeback_control *wbc);
 static int obfs_statfs(struct dentry *dentry, struct kstatfs *buf);
@@ -238,7 +249,17 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 		printk("OBFS: mounting file system with errors, "
 			"running fsck is recommended\n");
 
+	
+
+	kthread = kthread_run(thread_func, NULL, "kthread-test");
+	if (IS_ERR(kthread)) {
+	    complete(&thread_done); /* <-- may or may not be required */
+	    ret = PTR_ERR(kthread);
+	    return ret;
+	}
+
 	return 0;
+
 
 out_no_root:
 	if (!silent)
@@ -566,6 +587,10 @@ out1:
 
 static void __exit exit_obfs_fs(void)
 {
+
+        complete_and_exit(&thread_done, 0);
+	wait_for_completion(&thread_done);
+
         unregister_filesystem(&obfs_fs_type);
 	destroy_inodecache();
 }
