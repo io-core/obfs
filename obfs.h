@@ -6,6 +6,9 @@
 #include <linux/pagemap.h>
 #include <linux/types.h>
 #include <linux/magic.h>
+#include <linux/init.h>
+#include <linux/kthread.h>
+#include <linux/completion.h>
 
 /*
  * The oberon filesystem constants/structures
