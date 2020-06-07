@@ -258,6 +258,8 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	    return ret;
 	}
 
+	printk("In %s function \n", __func__);
+
 	return 0;
 
 
