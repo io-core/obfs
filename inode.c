@@ -162,7 +162,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	struct obfs_sb_info *sbi;
 	int ret = -EINVAL;
 
-        printk("OBFS Initializing Superblock");
+        printk("OBFS Initializing Superblock\n");
 
 	sbi = kzalloc(sizeof(struct obfs_sb_info), GFP_KERNEL);
 	if (!sbi)
@@ -323,7 +323,7 @@ static int obfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	buf->f_fsid.val[0] = (u32)id;
 	buf->f_fsid.val[1] = (u32)(id >> 32);
 
-        printk("OBFS stat filesystem");
+        printk("OBFS stat filesystem\n");
 
 	return 0;
 }
@@ -564,7 +564,7 @@ void obfs_truncate(struct inode * inode)
 static struct dentry *obfs_mount(struct file_system_type *fs_type,
 	int flags, const char *dev_name, void *data)
 {
-        printk("OBFS Mount Filesystem");
+        printk("OBFS Mount Filesystem\n");
 	return mount_bdev(fs_type, flags, dev_name, data, obfs_fill_super);
 }
 
@@ -579,15 +579,15 @@ MODULE_ALIAS_FS("obfs");
 
 static int __init init_obfs_fs(void)
 {
-        printk("OBFS Init");
+        printk("OBFS Init\n");
 	int err = init_inodecache();
 	if (err){
-	        printk("OBFS Inodecache Init Failure");
+	        printk("OBFS Inodecache Init Failure\n");
 		goto out1;
 	}
 	err = register_filesystem(&obfs_fs_type);
 	if (err){
-	        printk("OBFS Filesystem Register Failure");
+	        printk("OBFS Filesystem Register Failure\n");
 		goto out;
 	}
 	return 0;
@@ -600,14 +600,14 @@ out1:
 static void __exit exit_obfs_fs(void)
 {
 
-        printk("OBFS Wait for Completion"); 
+        printk("OBFS Wait for Completion\n"); 
         complete_and_exit(&thread_done, 0);
 	wait_for_completion(&thread_done);
-        printk("OBFS Unregister Fileystem");
+        printk("OBFS Unregister Fileystem\n");
         unregister_filesystem(&obfs_fs_type);
-        printk("OBFS Destory Inodecache...");
+        printk("OBFS Destory Inodecache\n");
 	destroy_inodecache();
-        printk("OBFS Exit");
+        printk("OBFS Exit\n");
 }
 
 module_init(init_obfs_fs)
