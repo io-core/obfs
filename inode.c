@@ -175,65 +175,23 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	if (!(bh = sb_bread(s, (OBFS_ROOTINODE/29)-1)))
 		goto out_bad_sb;
 
-//        printk("OBFS: Terminating Early\n");
-//        goto out;
-
-
-
 	ms = (struct obfs_dinode *) bh->b_data;
-//	sbi->s_ms = ms;
-//	sbi->s_sbh = bh;
+
         if (ms->origin == OBFS_SUPER_MAGIC) {
                 s->s_magic = OBFS_SUPER_MAGIC;
                 sbi->s_mount_state = OBFS_VALID_FS;
                 s->s_max_links = 0;
         } else
                 goto out_no_fs;
-//        sbi->s_imap_blocks = 8; // 65536 sectors / 8 bits per byte = 8192 = 8 x 1k blocks
-
-
-
-/*
-	sbi->s_mount_state = ms->s_state;
-	sbi->s_ninodes = ms->s_ninodes;
-	sbi->s_nzones = ms->s_nzones;
-	sbi->s_imap_blocks = ms->s_imap_blocks;
-	sbi->s_zmap_blocks = ms->s_zmap_blocks;
-	sbi->s_firstdatazone = ms->s_firstdatazone;
-	sbi->s_log_zone_size = ms->s_log_zone_size;
-	sbi->s_max_size = ms->s_max_size;
-	s->s_magic = ms->s_magic;
-	if ( *(__u16 *)(bh->b_data + 24) == OBFS_SUPER_MAGIC) {
-		m3s = (struct obfs3_super_block *) bh->b_data;
-		s->s_magic = m3s->s_magic;
-		sbi->s_imap_blocks = m3s->s_imap_blocks;
-		sbi->s_zmap_blocks = m3s->s_zmap_blocks;
-		sbi->s_firstdatazone = m3s->s_firstdatazone;
-		sbi->s_log_zone_size = m3s->s_log_zone_size;
-		sbi->s_max_size = m3s->s_max_size;
-		sbi->s_ninodes = m3s->s_ninodes;
-		sbi->s_nzones = m3s->s_zones;
-		sbi->s_dirsize = 64;
-		sbi->s_namelen = 60;
-		sbi->s_version = OBFS_V3;
-		sbi->s_mount_state = OBFS_VALID_FS;
-		sb_set_blocksize(s, m3s->s_blocksize);
-		s->s_max_links = OBFS_LINK_MAX;
-	} else
-		goto out_no_fs;
-*/
-
-
 
  	map = kzalloc(sizeof(struct iofs_bm), GFP_KERNEL);
 	if (!map)
 		goto out_no_map;
+
 	map->s[0]=~(uint32_t)0;
         map->s[1]=~(uint32_t)0;
 	sbi->s_map = map;
 
-
-	/* set up enough so that it can read an inode */
 	s->s_op = &obfs_sops;
 	root_inode = obfs_iget(s, OBFS_ROOTINODE);
 	if (IS_ERR(root_inode)) {
@@ -246,17 +204,6 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	if (!s->s_root)
 		goto out_no_root;
 
-	if (!sb_rdonly(s)) {
-//		mark_buffer_dirty(bh);
-	}
-	if (!(sbi->s_mount_state & OBFS_VALID_FS))
-		printk("OBFS: mounting unchecked file system, "
-			"running fsck is recommended\n");
-	else if (sbi->s_mount_state & OBFS_ERROR_FS)
-		printk("OBFS: mounting file system with errors, "
-			"running fsck is recommended\n");
-
-	
 
 //	kthread = kthread_run(thread_func, NULL, "kthread-test");
 //	if (IS_ERR(kthread)) {
@@ -265,7 +212,7 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 //	    return ret;
 //	}
 
-	printk("OBFS In %s function \n", __func__);
+	printk("OBFS: superblock loaded\n");
 
 	return 0;
 
@@ -275,8 +222,6 @@ out_no_root:
 		printk("OBFS: get root inode failed\n");
 	goto out_freemap;
 
-//out_no_bitmap:
-//	printk("OBFS: bad superblock or unable to read bitmaps\n");
 out_freemap:
 	kfree(sbi->s_map);
 	goto out_release;
@@ -287,14 +232,9 @@ out_no_map:
 		printk("OBFS: can't allocate map\n");
 	goto out_release;
 
-//out_illegal_sb:
-//	if (!silent)
-//		printk("OBFS: bad superblock\n");
-//	goto out_release;
-
 out_no_fs:
 	if (!silent)
-		printk("VFS: Can't find an Oberon filesystem"
+		printk("OBFS: Can't find an Oberon filesystem"
 		       "on device %s.\n", s->s_id);
 out_release:
 	brelse(bh);
