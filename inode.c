@@ -28,7 +28,7 @@ struct task_struct *kthread;
 
 static int thread_func(void* data)
 {
-    printk("In %s function\n", __func__);
+    printk("OBFS In %s function\n", __func__);
     return 0;
 }
 
@@ -253,14 +253,14 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 
 	
 
-	kthread = kthread_run(thread_func, NULL, "kthread-test");
-	if (IS_ERR(kthread)) {
-	    complete(&thread_done); /* <-- may or may not be required */
-	    ret = PTR_ERR(kthread);
-	    return ret;
-	}
+//	kthread = kthread_run(thread_func, NULL, "kthread-test");
+//	if (IS_ERR(kthread)) {
+//	    complete(&thread_done); /* <-- may or may not be required */
+//	    ret = PTR_ERR(kthread);
+//	    return ret;
+//	}
 
-	printk("In %s function \n", __func__);
+	printk("OBFS In %s function \n", __func__);
 
 	return 0;
 
