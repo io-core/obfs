@@ -590,11 +590,15 @@ out1:
 static void __exit exit_obfs_fs(void)
 {
 
+        printk("Complete OBFS..."); 
+               
         complete_and_exit(&thread_done, 0);
 	wait_for_completion(&thread_done);
-
+        printk("Completed...");
         unregister_filesystem(&obfs_fs_type);
+        printk("Destroy OBFS Inodecache...");
 	destroy_inodecache();
+        printk("Exit OBFS...");
 }
 
 module_init(init_obfs_fs)
