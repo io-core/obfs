@@ -92,14 +92,14 @@ static void init_once(void *foo)
 
 static int __init init_inodecache(void)
 {
-//	obfs_inode_cachep = kmem_cache_create("obfs_inode_cache",
-//					     sizeof(struct obfs_inode_info),
-//					     0, (SLAB_RECLAIM_ACCOUNT|
-//						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
-//					     init_once);
-//	if (obfs_inode_cachep == NULL)
-//		return -ENOMEM;
-//	return 0;
+	obfs_inode_cachep = kmem_cache_create("obfs_inode_cache",
+					     sizeof(struct obfs_inode_info),
+					     0, (SLAB_RECLAIM_ACCOUNT|
+						SLAB_MEM_SPREAD|SLAB_ACCOUNT),
+					     init_once);
+	if (obfs_inode_cachep == NULL)
+		return -ENOMEM;
+	return 0;
 }
 
 static void destroy_inodecache(void)
@@ -108,8 +108,8 @@ static void destroy_inodecache(void)
 	 * Make sure all delayed rcu free inodes are flushed before we
 	 * destroy cache.
 	 */
-//	rcu_barrier();
-//	kmem_cache_destroy(obfs_inode_cachep);
+	rcu_barrier();
+	kmem_cache_destroy(obfs_inode_cachep);
 }
 
 static const struct super_operations obfs_sops = {
@@ -175,8 +175,8 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	if (!(bh = sb_bread(s, (OBFS_ROOTINODE/29)-1)))
 		goto out_bad_sb;
 
-        printk("OBFS: Terminating Early\n");
-        goto out;
+//        printk("OBFS: Terminating Early\n");
+//        goto out;
 
 
 
