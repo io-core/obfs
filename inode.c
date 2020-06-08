@@ -162,6 +162,8 @@ static int obfs_fill_super(struct super_block *s, void *data, int silent)
 	struct obfs_sb_info *sbi;
 	int ret = -EINVAL;
 
+        printk("OBFS Initializing Superblock");
+
 	sbi = kzalloc(sizeof(struct obfs_sb_info), GFP_KERNEL);
 	if (!sbi)
 		return -ENOMEM;
@@ -320,6 +322,8 @@ static int obfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	buf->f_namelen = sbi->s_namelen;
 	buf->f_fsid.val[0] = (u32)id;
 	buf->f_fsid.val[1] = (u32)(id >> 32);
+
+        printk("OBFS stat filesystem");
 
 	return 0;
 }
