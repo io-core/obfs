@@ -560,6 +560,7 @@ void obfs_truncate(struct inode * inode)
 static struct dentry *obfs_mount(struct file_system_type *fs_type,
 	int flags, const char *dev_name, void *data)
 {
+        printk("OBFS Mount Filesystem");
 	return mount_bdev(fs_type, flags, dev_name, data, obfs_fill_super);
 }
 
@@ -574,12 +575,17 @@ MODULE_ALIAS_FS("obfs");
 
 static int __init init_obfs_fs(void)
 {
+        printk("OBFS Init");
 	int err = init_inodecache();
-	if (err)
+	if (err){
+	        printk("OBFS Inodecache Init Failure");
 		goto out1;
+	}
 	err = register_filesystem(&obfs_fs_type);
-	if (err)
+	if (err){
+	        printk("OBFS Filesystem Register Failure");
 		goto out;
+	}
 	return 0;
 out:
 	destroy_inodecache();
@@ -590,15 +596,14 @@ out1:
 static void __exit exit_obfs_fs(void)
 {
 
-        printk("Complete OBFS..."); 
-               
+        printk("OBFS Wait for Completion"); 
         complete_and_exit(&thread_done, 0);
 	wait_for_completion(&thread_done);
-        printk("Completed...");
+        printk("OBFS Unregister Fileystem");
         unregister_filesystem(&obfs_fs_type);
-        printk("Destroy OBFS Inodecache...");
+        printk("OBFS Destory Inodecache...");
 	destroy_inodecache();
-        printk("Exit OBFS...");
+        printk("OBFS Exit");
 }
 
 module_init(init_obfs_fs)
