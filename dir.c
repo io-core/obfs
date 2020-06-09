@@ -256,6 +256,9 @@ obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
 	__u32 inumber;
 	*res_page = NULL;
 
+        int                     slot;
+        struct obfs_dinode      *dinode;
+
 //	for (n = 0; n < npages; n++) {
 	n = 0;
 		char *kaddr, *limit;
@@ -267,9 +270,10 @@ obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
 			return NULL;
 		}
 
-		kaddr = (char*)page_address(page);
+//		kaddr = (char*)page_address(page);
+                dinode = (struct obfs_dinode *)page_address(page);
 
-	        if (le32_to_cpu(kaddr) != OBFS_DIRMARK) {
+	        if (dinode->origin != OBFS_DIRMARK) {
 	                pr_err("%s(): invalid directory inode \n", __func__);
 	                dir_put_page(page);
                         return NULL;
@@ -277,6 +281,11 @@ obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
 	        }else{
 	                pr_err("%s(): good directory inode \n", __func__);
 	        }
+
+	for (slot = 0; slot < dinode->dirb.m && slot < 24; slot++) {
+
+
+	}
 
 //		limit = kaddr + obfs_last_byte(dir, n) - sbi->s_dirsize;
 //		for (p = kaddr; p <= limit; p = obfs_next_entry(p, sbi)) {
