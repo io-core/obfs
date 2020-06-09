@@ -28,13 +28,12 @@ struct task_struct *kthread;
 
 static int thread_func(void* data)
 {
-    printk("OBFS In %s function\n", __func__);
+    printk("OBFS: In %s function\n", __func__);
     return 0;
 }
 
 
-static int obfs_write_inode(struct inode *inode,
-		struct writeback_control *wbc);
+static int obfs_write_inode(struct inode *inode, struct writeback_control *wbc);
 static int obfs_statfs(struct dentry *dentry, struct kstatfs *buf);
 static int obfs_remount (struct super_block * sb, int * flags, char * data);
 
@@ -53,7 +52,6 @@ static void obfs_evict_inode(struct inode *inode)
 
 static void obfs_put_super(struct super_block *sb)
 {
-//	int i;
 	struct obfs_sb_info *sbi = obfs_sb(sb);
 	brelse (sbi->s_sbh);
 	kfree(sbi->s_map);
@@ -368,6 +366,8 @@ static struct inode *do_obfs_iget(struct inode *inode)
         uint32_t tv;
         time_t t_of_day;
 
+        printk("OBFS: reading inode %08lx\n",inode->i_ino);
+
 	raw_inode = obfs_get_raw_inode(inode->i_sb, inode->i_ino, &bh);
 	if (!raw_inode) {
 		iget_failed(inode);
@@ -426,9 +426,10 @@ struct inode *obfs_iget(struct super_block *sb, unsigned long ino)
 	inode = iget_locked(sb, ino);
 	if (!inode)
 		return ERR_PTR(-ENOMEM);
-	if (!(inode->i_state & I_NEW))
+	if (!(inode->i_state & I_NEW)){
+		printk("OBFS: returning cached inode\n");
 		return inode;
-
+	}
 	return do_obfs_iget(inode);
 }
 
