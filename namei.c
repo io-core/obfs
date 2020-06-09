@@ -151,20 +151,20 @@ out_dir:
 static int obfs_unlink(struct inode * dir, struct dentry *dentry)
 {
 	int err = -ENOENT;
-	struct inode * inode = d_inode(dentry);
-	struct page * page;
-	struct obfs_dir_entry * de;
-
-	de = obfs_find_entry(dentry, &page);
-	if (!de)
+//	struct inode * inode = d_inode(dentry);
+//	struct page * page;
+//	struct obfs_dir_entry * de;
+//
+//	de = obfs_find_entry(dentry, &page);
+//	if (!de)
+//		goto end_unlink;
+//
+//	err = obfs_delete_entry(de, page);
+//	if (err)
 		goto end_unlink;
 
-	err = obfs_delete_entry(de, page);
-	if (err)
-		goto end_unlink;
-
-	inode->i_ctime = dir->i_ctime;
-	inode_dec_link_count(inode);
+//	inode->i_ctime = dir->i_ctime;
+//	inode_dec_link_count(inode);
 end_unlink:
 	return err;
 }
@@ -188,14 +188,14 @@ static int obfs_rename(struct inode * old_dir, struct dentry *old_dentry,
 			struct inode * new_dir, struct dentry *new_dentry,
 			unsigned int flags)
 {
-	struct inode * old_inode = d_inode(old_dentry);
-	struct inode * new_inode = d_inode(new_dentry);
-	struct page * dir_page = NULL;
-	struct obfs_dir_entry * dir_de = NULL;
-	struct page * old_page;
-	struct obfs_dir_entry * old_de;
+//	struct inode * old_inode = d_inode(old_dentry);
+//	struct inode * new_inode = d_inode(new_dentry);
+//	struct page * dir_page = NULL;
+//	struct obfs_dir_entry * dir_de = NULL;
+//	struct page * old_page;
+//	struct obfs_dir_entry * old_de;
 	int err = -ENOENT;
-
+/*
 	if (flags & ~RENAME_NOREPLACE)
 		return -EINVAL;
 
@@ -253,6 +253,7 @@ out_old:
 	kunmap(old_page);
 	put_page(old_page);
 out:
+*/
 	return err;
 }
 

@@ -156,60 +156,6 @@ static int do_obfs_readdir(struct inode *file, uint64_t ino, struct dir_context 
 
         return here;
 
-/*
-	struct inode *inode = file_inode(file);
-	struct super_block *sb = inode->i_sb;
-	struct obfs_sb_info *sbi = obfs_sb(sb);
-	unsigned chunk_size = sbi->s_dirsize;
-	unsigned long npages = dir_pages(inode);
-	unsigned long pos = ctx->pos;
-	unsigned offset;
-	unsigned long n;
-
-	ctx->pos = pos = ALIGN(pos, chunk_size);
-	if (pos >= inode->i_size)
-		return 0;
-
-	offset = pos & ~PAGE_MASK;
-	n = pos >> PAGE_SHIFT;
-
-	for ( ; n < npages; n++, offset = 0) {
-	offset = 0;
-		char *p, *kaddr, *limit;
-		struct page *page = dir_get_page(inode, n);
-
-		if (IS_ERR(page))
-			continue;
-		kaddr = (char *)page_address(page);
-		p = kaddr+offset;
-		limit = kaddr + obfs_last_byte(inode, n) - chunk_size;
-		for ( ; p <= limit; p = obfs_next_entry(p, sbi)) {
-			const char *name;
-			__u32 inumber;
-			if (sbi->s_version == OBFS_V3) {
-				obfs3_dirent *de3 = (obfs3_dirent *)p;
-				name = de3->name;
-				inumber = de3->inode;
-	 		} else {
-				obfs_dirent *de = (obfs_dirent *)p;
-				name = de->name;
-				inumber = de->inode;
-			}
-			if (inumber) {
-				unsigned l = strnlen(name, sbi->s_namelen);
-				if (!dir_emit(ctx, name, l,
-					      inumber, DT_UNKNOWN)) {
-					dir_put_page(page);
-					return 0;
-				}
-			}
-			ctx->pos += chunk_size;
-		}
-		dir_put_page(page);
-	}
-	return 0;
-*/
-
 
 }
 
@@ -232,30 +178,19 @@ static inline int namecompare(int len, int maxlen,
 	return !memcmp(name, buffer, len);
 }
 
-/*
- *	obfs_find_entry()
- *
- * finds an entry in the specified directory with the wanted name. It
- * returns the cache buffer in which the entry was found, and the entry
- * itself (as a parameter - res_dir). It does NOT read the inode of the
- * entry - you'll have to do that yourself if you want to.
- */
-//obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
-ino_t obfs_find_entry(struct dentry *dentry, struct page **res_page)
+ino_t obfs_find_entry(struct dentry *dentry, const char * vname, int vnamelen)
 {
-	const char * vname = dentry->d_name.name;
-	int vnamelen = dentry->d_name.len;
+//	const char * vname = dentry->d_name.name;
+//	int vnamelen = dentry->d_name.len;
 	struct inode * dir = d_inode(dentry->d_parent);
 	struct super_block * sb = dir->i_sb;
 	struct obfs_sb_info * sbi = obfs_sb(sb);
-//	unsigned long n;
-//	unsigned long npages = dir_pages(dir);
 	struct page *page = NULL;
 	char *p;
 
 	char *namx;
 	__u32 inumber;
-	*res_page = NULL;
+//	*res_page = NULL;
 
         int                     slot, namelen, m;
         char                    *nameptr;
@@ -266,8 +201,6 @@ ino_t obfs_find_entry(struct dentry *dentry, struct page **res_page)
 	struct obfs_de *dirslot;
         
 
-//	for (n = 0; n < npages; n++) {
-//	n = 0;
 		char *kaddr, *limit;
 
 
@@ -277,21 +210,9 @@ ino_t obfs_find_entry(struct dentry *dentry, struct page **res_page)
                 return 0;
         }
 
-//	page = dir_get_page(dir, 0);
-//	if (IS_ERR(page)){
-//		printk("OBFS: dir_get_page error\n");
-//		dir_put_page(page);
-//		return NULL;
-//	}
-
-
-
-//		kaddr = (char*)page_address(page);
-//                dinode = (struct obfs_dinode *)page_address(page);
-
 	        if (raw_inode->origin != OBFS_DIRMARK) {
 	                pr_err("%s(): invalid directory inode \n", __func__);
-//	                dir_put_page(page);
+
                         return 0;
 	        }
 
@@ -311,29 +232,9 @@ ino_t obfs_find_entry(struct dentry *dentry, struct page **res_page)
 		}
 	}
 
-//		limit = kaddr + obfs_last_byte(dir, n) - sbi->s_dirsize;
-//		for (p = kaddr; p <= limit; p = obfs_next_entry(p, sbi)) {
-//			if (sbi->s_version == OBFS_V3) {
-//				obfs3_dirent *de3 = (obfs3_dirent *)p;
-//				namx = de3->name;
-//				inumber = de3->inode;
-// 			} else {
-//				obfs_dirent *de = (obfs_dirent *)p;
-//				namx = de->name;
-//				inumber = de->inode;
-//			}
-//			if (!inumber)
-//				continue;
-//			if (namecompare(namelen, sbi->s_namelen, name, namx))
-//				goto found;
-//		}
-//		dir_put_page(page);
-//	}
 	return 0;
 
 found:
-//	*res_page = page;
-//	return (obfs_dirent *)p;
 	return file_ino;
 }
 
@@ -591,20 +492,7 @@ struct obfs_dir_entry * obfs_dotdot (struct inode *dir, struct page **p)
 ino_t obfs_inode_by_name(struct dentry *dentry)
 {
 	struct page *page;
-	ino_t res = obfs_find_entry(dentry, &page);
-//        struct obfs_dir_entry *de = obfs_find_entry(dentry, &page);
-//	ino_t res = 0;
+	ino_t res = obfs_find_entry(dentry, dentry->d_name.name, dentry->d_name.len);
 
-//	if (de) {
-//		struct address_space *mapping = page->mapping;
-//		struct inode *inode = mapping->host;
-//		struct obfs_sb_info *sbi = obfs_sb(inode->i_sb);
-//
-//		if (sbi->s_version == OBFS_V3)
-//			res = ((obfs3_dirent *) de)->inode;
-//		else
-//			res = de->inode;
-//		dir_put_page(page);
-//	}
 	return res;
 }
