@@ -576,7 +576,7 @@ static void __exit exit_obfs_fs(void)
 //	wait_for_completion(&thread_done);
         printk("OBFS Unregister Fileystem\n");
         unregister_filesystem(&obfs_fs_type);
-        printk("OBFS Destory Inodecache\n");
+        printk("OBFS Destroy Inodecache\n");
 	destroy_inodecache();
         printk("OBFS Exit\n");
 }
