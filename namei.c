@@ -27,8 +27,8 @@ static struct dentry *obfs_lookup(struct inode * dir, struct dentry *dentry, uns
 	struct inode * inode = NULL;
 	ino_t ino;
 
-	if (dentry->d_name.len > obfs_sb(dir->i_sb)->s_namelen)
-		return ERR_PTR(-ENAMETOOLONG);
+//	if (dentry->d_name.len > obfs_sb(dir->i_sb)->s_namelen)
+//		return ERR_PTR(-ENAMETOOLONG);
 
 	ino = obfs_inode_by_name(dentry);
 	if (ino)

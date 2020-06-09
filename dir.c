@@ -259,6 +259,8 @@ obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
         int                     slot;
         struct obfs_dinode      *dinode;
 
+	printk("OBFS: looking for %s\n","blah");
+
 //	for (n = 0; n < npages; n++) {
 	n = 0;
 		char *kaddr, *limit;
