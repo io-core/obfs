@@ -261,6 +261,8 @@ obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
 
 	printk("OBFS: looking for %s\n","blah");
 
+	return NULL;
+
 //	for (n = 0; n < npages; n++) {
 	n = 0;
 		char *kaddr, *limit;
