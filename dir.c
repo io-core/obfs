@@ -81,7 +81,7 @@ static inline void *obfs_next_entry(void *de, struct obfs_sb_info *sbi)
 	return (void*)((char*)de + sbi->s_dirsize);
 }
 
-static int obfs_readdir(struct file *file, struct dir_context *ctx)
+static int do_obfs_readdir(struct file *file, struct dir_context *ctx)
 {
 	struct inode *inode = file_inode(file);
 	struct super_block *sb = inode->i_sb;
@@ -134,6 +134,12 @@ static int obfs_readdir(struct file *file, struct dir_context *ctx)
 	}
 	return 0;
 }
+
+static int obfs_readdir(struct file *file, struct dir_context *ctx)
+{
+	return do_obfs_readdir(file, ctx);
+}
+
 
 static inline int namecompare(int len, int maxlen,
 	const char * name, const char * buffer)
