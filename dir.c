@@ -174,6 +174,7 @@ static int do_obfs_readdir(struct inode *file, uint64_t ino, struct dir_context 
 	n = pos >> PAGE_SHIFT;
 
 	for ( ; n < npages; n++, offset = 0) {
+	offset = 0;
 		char *p, *kaddr, *limit;
 		struct page *page = dir_get_page(inode, n);
 
@@ -247,7 +248,7 @@ obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
 	struct super_block * sb = dir->i_sb;
 	struct obfs_sb_info * sbi = obfs_sb(sb);
 	unsigned long n;
-	unsigned long npages = dir_pages(dir);
+//	unsigned long npages = dir_pages(dir);
 	struct page *page = NULL;
 	char *p;
 
@@ -255,32 +256,46 @@ obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
 	__u32 inumber;
 	*res_page = NULL;
 
-	for (n = 0; n < npages; n++) {
+//	for (n = 0; n < npages; n++) {
+	n = 0;
 		char *kaddr, *limit;
 
 		page = dir_get_page(dir, n);
-		if (IS_ERR(page))
-			continue;
+		if (IS_ERR(page)){
+			printk("OBFS: dir_get_page error\n");
+			dir_put_page(page);
+			return NULL;
+		}
 
 		kaddr = (char*)page_address(page);
-		limit = kaddr + obfs_last_byte(dir, n) - sbi->s_dirsize;
-		for (p = kaddr; p <= limit; p = obfs_next_entry(p, sbi)) {
-			if (sbi->s_version == OBFS_V3) {
-				obfs3_dirent *de3 = (obfs3_dirent *)p;
-				namx = de3->name;
-				inumber = de3->inode;
- 			} else {
-				obfs_dirent *de = (obfs_dirent *)p;
-				namx = de->name;
-				inumber = de->inode;
-			}
-			if (!inumber)
-				continue;
-			if (namecompare(namelen, sbi->s_namelen, name, namx))
-				goto found;
-		}
+
+	        if (le32_to_cpu(kaddr) != OBFS_DIRMARK) {
+	                pr_err("%s(): invalid directory inode \n", __func__);
+	                dir_put_page(page);
+                        return NULL;
+
+	        }else{
+	                pr_err("%s(): good directory inode \n", __func__);
+	        }
+
+//		limit = kaddr + obfs_last_byte(dir, n) - sbi->s_dirsize;
+//		for (p = kaddr; p <= limit; p = obfs_next_entry(p, sbi)) {
+//			if (sbi->s_version == OBFS_V3) {
+//				obfs3_dirent *de3 = (obfs3_dirent *)p;
+//				namx = de3->name;
+//				inumber = de3->inode;
+// 			} else {
+//				obfs_dirent *de = (obfs_dirent *)p;
+//				namx = de->name;
+//				inumber = de->inode;
+//			}
+//			if (!inumber)
+//				continue;
+//			if (namecompare(namelen, sbi->s_namelen, name, namx))
+//				goto found;
+//		}
 		dir_put_page(page);
-	}
+//	}
 	return NULL;
 
 found:
