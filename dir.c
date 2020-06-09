@@ -81,8 +81,82 @@ static inline void *obfs_next_entry(void *de, struct obfs_sb_info *sbi)
 	return (void*)((char*)de + sbi->s_dirsize);
 }
 
-static int do_obfs_readdir(struct file *file, struct dir_context *ctx)
+static int do_obfs_readdir(struct inode *file, uint64_t ino, struct dir_context *ctx, int start, bool mark)
 {
+
+        struct inode *finode = file; //file_inode(file);
+        struct buffer_head *bh;
+
+        int                     slot, here, namelen;
+        char                    *nameptr;
+        struct obfs_dinode      *dinode;
+        struct obfs_dinode      dinode_buf;
+        struct obfs_de          *dirslot;
+//        struct obfs_bm          *bm;
+
+        here = start;
+
+        bh = sb_bread(finode->i_sb, (ino/29)-1);
+
+        if (!bh) {
+                pr_err("%s(): failed to read dir inode %llu\n",
+                       __func__, ino);
+                return 0;
+        }
+
+        dinode = &dinode_buf;
+        memcpy(dinode,bh->b_data,sizeof(dinode_buf));
+        brelse(bh);
+
+        if (le32_to_cpu(dinode->origin) != OBFS_DIRMARK) {
+                pr_err("%s(): invalid directory inode %llu\n", __func__,ino);
+                return here;
+        }
+//        bm = SUPER_INFO(finode->i_sb);
+
+//        if (mark) {
+//                BITSET(bm->s[(ino/29)/32],(ino/29)%32);
+//        }
+
+//      if ((!mark) && (here==0)){
+//              if (ctx->pos==0){
+//                dir_emit_dot(file, ctx);
+//                  ctx->pos++;
+//                }
+//              here++;
+//      }
+
+        if (dinode->dirb.p0 != 0){
+                here = do_obfs_readdir( file, dinode->dirb.p0, ctx, here, mark );
+        }
+
+
+        for (slot = 0; slot < dinode->dirb.m && slot < 24; slot++) {
+                dirslot  = &dinode->dirb.e[slot];
+                namelen  = strnlen(dirslot->name,24);
+                nameptr  = dirslot->name;
+                if((!mark) && (here >= ctx->pos)) {
+                  ctx->pos++;
+                  if (!dir_emit(ctx, nameptr, namelen, dirslot->adr, DT_UNKNOWN)) {
+                        return here;
+                  }
+                  if (dirslot->p != 0){
+                        here = do_obfs_readdir( file, dirslot->p, ctx, here, mark );
+                  }
+                }else{
+
+//                  markfile(file,dirslot->adr,bm,true);
+//
+//                  if (dirslot->p != 0){
+//                        here = do_obfs_readdir( file, dirslot->p, ctx, here, mark );
+//                  }
+                }
+                here++;
+        }
+
+        return here;
+
+/*
 	struct inode *inode = file_inode(file);
 	struct super_block *sb = inode->i_sb;
 	struct obfs_sb_info *sbi = obfs_sb(sb);
@@ -133,11 +207,19 @@ static int do_obfs_readdir(struct file *file, struct dir_context *ctx)
 		dir_put_page(page);
 	}
 	return 0;
+*/
+
+
 }
 
 static int obfs_readdir(struct file *file, struct dir_context *ctx)
 {
-	return do_obfs_readdir(file, ctx);
+    struct inode *inode = file_inode(file);
+    int ret;
+    ret = do_obfs_readdir( file_inode(file), inode->i_ino, ctx, 0, false );
+    ctx->pos = INT_MAX;
+    return 0;
+
 }
 
 
