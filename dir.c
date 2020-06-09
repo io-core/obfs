@@ -257,7 +257,7 @@ ino_t obfs_find_entry(struct dentry *dentry, struct page **res_page)
 	__u32 inumber;
 	*res_page = NULL;
 
-        int                     slot, namelen;
+        int                     slot, namelen, m;
         char                    *nameptr;
 
 	ino_t			file_ino;
@@ -284,8 +284,6 @@ ino_t obfs_find_entry(struct dentry *dentry, struct page **res_page)
 //		return NULL;
 //	}
 
-        printk("OBFS: looking for %s\n",vname);
-        return 0;
 
 
 //		kaddr = (char*)page_address(page);
@@ -294,11 +292,16 @@ ino_t obfs_find_entry(struct dentry *dentry, struct page **res_page)
 	        if (raw_inode->origin != OBFS_DIRMARK) {
 	                pr_err("%s(): invalid directory inode \n", __func__);
 //	                dir_put_page(page);
-                        return NULL;
+                        return 0;
 	        }
 
+	m = raw_inode->dirb.m;
+        printk("OBFS: looking for %s in %ld with mark %x having %d entries\n",vname,dir->i_ino,raw_inode->origin,m);
+//        return 0;
+
+
 	file_ino = 0;
-	for (slot = 0; slot < raw_inode->dirb.m && slot < 24; slot++) {
+	for (slot = 0; slot < m && slot < 24; slot++) {
 		dirslot = &raw_inode->dirb.e[slot];
                 namelen = strnlen(dirslot->name,24);
                 nameptr = dirslot->name;
@@ -306,8 +309,6 @@ ino_t obfs_find_entry(struct dentry *dentry, struct page **res_page)
 			file_ino = dirslot->adr;
                         goto found;
 		}
-
-
 	}
 
 //		limit = kaddr + obfs_last_byte(dir, n) - sbi->s_dirsize;
@@ -326,7 +327,7 @@ ino_t obfs_find_entry(struct dentry *dentry, struct page **res_page)
 //			if (namecompare(namelen, sbi->s_namelen, name, namx))
 //				goto found;
 //		}
-		dir_put_page(page);
+//		dir_put_page(page);
 //	}
 	return 0;
 
