@@ -247,7 +247,7 @@ obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
 	struct inode * dir = d_inode(dentry->d_parent);
 	struct super_block * sb = dir->i_sb;
 	struct obfs_sb_info * sbi = obfs_sb(sb);
-	unsigned long n;
+//	unsigned long n;
 //	unsigned long npages = dir_pages(dir);
 	struct page *page = NULL;
 	char *p;
@@ -257,36 +257,46 @@ obfs_dirent *obfs_find_entry(struct dentry *dentry, struct page **res_page)
 	*res_page = NULL;
 
         int                     slot;
-        struct obfs_dinode      *dinode;
-
-	printk("OBFS: looking for %s\n","blah");
-
-	return NULL;
+	
+        struct buffer_head * bh;
+        struct obfs_dinode * raw_inode;
+        
 
 //	for (n = 0; n < npages; n++) {
-	n = 0;
+//	n = 0;
 		char *kaddr, *limit;
 
-		page = dir_get_page(dir, n);
-		if (IS_ERR(page)){
-			printk("OBFS: dir_get_page error\n");
-			dir_put_page(page);
-			return NULL;
-		}
+
+        raw_inode = obfs_get_raw_inode(dir->i_sb, dir->i_ino, &bh);
+        if (!raw_inode) {
+                printk("OBFS: dir_get_page error\n");
+                return NULL;
+        }
+
+//	page = dir_get_page(dir, 0);
+//	if (IS_ERR(page)){
+//		printk("OBFS: dir_get_page error\n");
+//		dir_put_page(page);
+//		return NULL;
+//	}
+
+        printk("OBFS: looking for %s\n",name);
+        return NULL;
+
 
 //		kaddr = (char*)page_address(page);
-                dinode = (struct obfs_dinode *)page_address(page);
+//                dinode = (struct obfs_dinode *)page_address(page);
 
-	        if (dinode->origin != OBFS_DIRMARK) {
+	        if (raw_inode->origin != OBFS_DIRMARK) {
 	                pr_err("%s(): invalid directory inode \n", __func__);
-	                dir_put_page(page);
+//	                dir_put_page(page);
                         return NULL;
 
 	        }else{
 	                pr_err("%s(): good directory inode \n", __func__);
 	        }
 
-	for (slot = 0; slot < dinode->dirb.m && slot < 24; slot++) {
+	for (slot = 0; slot < raw_inode->dirb.m && slot < 24; slot++) {
 
 
 	}
