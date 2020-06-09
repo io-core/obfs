@@ -393,6 +393,31 @@ static struct inode *do_obfs_iget(struct inode *inode)
         inode->i_atime.tv_nsec = inode->i_mtime.tv_nsec = inode->i_ctime.tv_nsec = 0;
 
 
+        switch (inode->i_mode & S_IFMT) {
+                case S_IFDIR:
+                        inode->i_op = &obfs_dir_inode_operations;
+                        inode->i_fop = &obfs_dir_operations;
+                        break;
+                case S_IFREG:
+                        inode->i_fop = &generic_ro_fops;
+                        inode->i_data.a_ops = &obfs_aops;
+                        break;
+                case S_IFLNK:
+//                        inode->i_op = &page_symlink_inode_operations;
+//                        inode_nohighmem(inode);
+//                        inode->i_data.a_ops = &obfs_symlink_aops;
+//                        break;
+                case S_IFCHR:
+                case S_IFBLK:
+                case S_IFIFO:
+//                      init_special_inode(inode, inode->i_mode, device);
+//                      break;
+                default:
+                        pr_warn("unsupported inode mode %o\n", inode->i_mode);
+	                return ERR_PTR(-EIO);
+        }
+
+
 /*
 	inode->i_mode = raw_inode->i_mode;
 	i_uid_write(inode, raw_inode->i_uid);
