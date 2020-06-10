@@ -200,6 +200,7 @@ ino_t obfs_find_entry(struct inode * vdir, const char * vname, int vnamelen)
 
         if (raw_inode->origin != OBFS_DIRMARK) {
                 pr_err("%s(): invalid directory inode \n", __func__);
+	        brelse(bh);
                 return 0;
 	}
 
@@ -223,14 +224,18 @@ ino_t obfs_find_entry(struct inode * vdir, const char * vname, int vnamelen)
 				lowerdir = obfs_iget(vdir->i_sb, lower);
 				ret = obfs_find_entry( lowerdir, vname, vnamelen );
 			}
-			if (ret != 0) return ret;
+			if (ret != 0){
+			         brelse(bh);
+				 return ret;
+			}
 		}
 		lower = dirslot->p;
 	}
-
+        brelse(bh);
 	return 0;
 
 found:
+	brelse(bh);
 	return file_ino;
 }
 
