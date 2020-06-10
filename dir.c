@@ -219,17 +219,18 @@ ino_t obfs_find_entry(struct super_block * i_sb, ino_t i_ino, const char * vname
 		}else{
 			ret = 0;
 			if (strncmp(vname,nameptr,namelen) < 0 )
-				file_ino = obfs_find_entry( i_sb, lower, vname, vnamelen );
+				if (lower != 0)
+					file_ino = obfs_find_entry( i_sb, lower, vname, vnamelen );
 			if (file_ino != 0)
 			         goto found;
 		}
 		lower = dirslot->p;
 	}
-	if (lower != 0){
+	if (lower != 0)
                 file_ino = obfs_find_entry( i_sb, lower, vname, vnamelen );
-                if (file_ino != 0)
-                         goto found;
-	}
+        if (file_ino != 0)
+                goto found;
+	
         brelse(bh);
 	return 0;
 found:

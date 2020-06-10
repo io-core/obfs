@@ -382,6 +382,7 @@ static struct inode *do_obfs_iget(struct inode *inode)
         tv = raw_inode->fhb.date;
         //                  year        month             day                 
         //                  hour        minute            second
+	printk("OBFS: tv is %x\n",tv);
         t_of_day = mktime((uint32_t)((tv >> 26) & 0x3FF)+2000,  
                  (tv >> 22) & 0xFF , (tv >> 18) & 0x1FF, (tv >> 12) & 0x1FF, ( tv >> 6) & 0x3FF, tv & 0x3FF);
 
