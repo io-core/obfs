@@ -398,6 +398,7 @@ static struct inode *do_obfs_iget(struct inode *inode)
         inode->i_ctime.tv_sec = t_of_day;
         inode->i_atime.tv_nsec = inode->i_mtime.tv_nsec = inode->i_ctime.tv_nsec = 0;
 
+	inode->i_blocks=0;
 
         switch (inode->i_mode & S_IFMT) {
                 case S_IFDIR:
@@ -407,6 +408,7 @@ static struct inode *do_obfs_iget(struct inode *inode)
                 case S_IFREG:
                         inode->i_fop = &generic_ro_fops;
                         inode->i_data.a_ops = &obfs_aops;
+			inode->i_size = (raw_inode->fhb.aleng * 1024) + raw_inode->fhb.bleng - 352;
                         break;
                 case S_IFLNK:
 //                        inode->i_op = &page_symlink_inode_operations;
@@ -424,24 +426,6 @@ static struct inode *do_obfs_iget(struct inode *inode)
         }
 
 
-/*
-	inode->i_mode = raw_inode->i_mode;
-	i_uid_write(inode, raw_inode->i_uid);
-	i_gid_write(inode, raw_inode->i_gid);
-	set_nlink(inode, raw_inode->i_nlinks);
-	inode->i_size = raw_inode->i_size;
-	inode->i_mtime.tv_sec = raw_inode->i_mtime;
-	inode->i_atime.tv_sec = raw_inode->i_atime;
-	inode->i_ctime.tv_sec = raw_inode->i_ctime;
-	inode->i_mtime.tv_nsec = 0;
-	inode->i_atime.tv_nsec = 0;
-	inode->i_ctime.tv_nsec = 0;
-	inode->i_blocks = 0;
-	for (i = 0; i < 10; i++)
-		obfs_inode->u.i2_data[i] = raw_inode->i_zone[i];
-	obfs_set_inode(inode, old_decode_dev(raw_inode->i_zone[0]));
-
-*/
 	brelse(bh);
 	unlock_new_inode(inode);
 	return inode;
