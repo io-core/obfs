@@ -21,6 +21,7 @@
 #include <linux/highuid.h>
 #include <linux/vfs.h>
 #include <linux/writeback.h>
+#include <linux/time.h>
 
 static DECLARE_COMPLETION(thread_done);
 
@@ -366,6 +367,8 @@ static struct inode *do_obfs_iget(struct inode *inode)
         uint32_t tv;
         time_t t_of_day;
 
+
+
         printk("OBFS: reading inode %08lx\n",inode->i_ino);
 
 	raw_inode = obfs_get_raw_inode(inode->i_sb, inode->i_ino, &bh);
@@ -382,9 +385,11 @@ static struct inode *do_obfs_iget(struct inode *inode)
         tv = raw_inode->fhb.date;
         //                  year        month             day                 
         //                  hour        minute            second
-	printk("OBFS: tv is %x\n",tv);
-        t_of_day = mktime((uint32_t)((tv >> 26) & 0x3FF)+2000,  
-                 (tv >> 22) & 0xFF , (tv >> 18) & 0x1FF, (tv >> 12) & 0x1FF, ( tv >> 6) & 0x3FF, tv & 0x3FF);
+	
+
+
+        t_of_day = mktime((uint32_t)((tv >> 26) & 0x3FF)+2000,
+                 ((tv >> 22) & 0xFF)+1 , ((tv >> 18) & 0x1FF)+1, (tv >> 12) & 0x1FF, ( tv >> 6) & 0x3FF, tv & 0x3FF);
 
 
 
