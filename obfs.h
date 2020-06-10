@@ -216,7 +216,7 @@ extern int V2_obfs_get_block(struct inode *, long, struct buffer_head *, int);
 extern unsigned V2_obfs_blocks(loff_t, struct super_block *);
 
 //extern struct obfs_dir_entry *obfs_find_entry(struct dentry*, struct page**);
-ino_t obfs_find_entry(struct dentry*, const char * vname, int vnamelen);
+ino_t obfs_find_entry(struct inode * vdir, const char * vname, int vnamelen);
 extern int obfs_add_link(struct dentry*, struct inode*);
 extern int obfs_delete_entry(struct obfs_dir_entry*, struct page*);
 extern int obfs_make_empty(struct inode*, struct inode*);
