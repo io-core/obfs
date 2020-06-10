@@ -178,10 +178,8 @@ static inline int namecompare(int len, int maxlen,
 	return !memcmp(name, buffer, len);
 }
 
-ino_t obfs_find_entry(struct inode * vdir, const char * vname, int vnamelen)
+ino_t obfs_find_entry(struct super_block * i_sb, ino_t i_ino, const char * vname, int vnamelen)
 {
-//	struct inode * vdir = d_inode(dentry->d_parent);
-//	struct super_block * sb = vdir->i_sb;
 
         int slot, namelen, m;
         char *nameptr;
@@ -192,7 +190,7 @@ ino_t obfs_find_entry(struct inode * vdir, const char * vname, int vnamelen)
         struct obfs_dinode * raw_inode;
 	struct obfs_de *dirslot;
         
-        raw_inode = obfs_get_raw_inode(vdir->i_sb, vdir->i_ino, &bh);
+        raw_inode = obfs_get_raw_inode(i_sb, i_ino, &bh);
         if (!raw_inode) {
                 printk("OBFS: dir_get_page error\n");
                 return 0;
@@ -205,7 +203,7 @@ ino_t obfs_find_entry(struct inode * vdir, const char * vname, int vnamelen)
 	}
 
 	m = raw_inode->dirb.m;
-        printk("OBFS: looking for %s in %ld with mark %x having %d entries\n",vname,vdir->i_ino,raw_inode->origin,m);
+        printk("OBFS: looking for %s in %ld with mark %x having %d entries\n",vname,i_ino,raw_inode->origin,m);
 //        return 0;
 
 
@@ -221,8 +219,8 @@ ino_t obfs_find_entry(struct inode * vdir, const char * vname, int vnamelen)
 		}else{
 			ret = 0;
 			if (strncmp(vname,nameptr,namelen) < 0 ){
-				lowerdir = obfs_iget(vdir->i_sb, lower);
-				ret = obfs_find_entry( lowerdir, vname, vnamelen );
+//				lowerdir = obfs_iget(vdir->i_sb, lower);
+//				ret = obfs_find_entry( lowerdir, vname, vnamelen );
 			}
 			if (ret != 0){
 			         brelse(bh);
@@ -492,8 +490,8 @@ struct obfs_dir_entry * obfs_dotdot (struct inode *dir, struct page **p)
 
 ino_t obfs_inode_by_name(struct dentry *dentry)
 {
-	
-	ino_t res = obfs_find_entry(d_inode(dentry->d_parent), dentry->d_name.name, dentry->d_name.len);
+	struct inode * vdir = d_inode(dentry->d_parent);
+	ino_t res = obfs_find_entry(vdir->i_sb, vdir->i_ino, dentry->d_name.name, dentry->d_name.len);
 
 	return res;
 }
