@@ -3,6 +3,7 @@
 #include "obfs.h"
 
 enum {DIRECT = 7, DEPTH = 4};	/* Have triple indirect */
+//enum {DIRECT = 7, DEPTH = 2};   /* Have single indirect */
 
 typedef u32 block_t;	/* 32 bit, host order */
 
@@ -21,7 +22,10 @@ static inline block_t *i_data(struct inode *inode)
 	return (block_t *)obfs_i(inode)->u.i2_data;
 }
 
-#define DIRCOUNT 7
+//#define OBFS_SECTABSIZE 64
+//#define OBFS_EXTABSIZE 12
+//#define DIRCOUNT 7
+#define DIRCOUNT OBFS_SECTABSIZE
 #define INDIRCOUNT(sb) (1 << ((sb)->s_blocksize_bits - 2))
 
 static int block_to_path(struct inode * inode, long block, int offsets[DEPTH])
@@ -38,22 +42,22 @@ static int block_to_path(struct inode * inode, long block, int offsets[DEPTH])
 			printk("OBFS: block_to_path: "
 			       "block %ld too big on dev %pg\n",
 				block, sb->s_bdev);
-	} else if (block < DIRCOUNT) {
+	} else {  //if (block < DIRCOUNT) {
 		offsets[n++] = block;
-	} else if ((block -= DIRCOUNT) < INDIRCOUNT(sb)) {
-		offsets[n++] = DIRCOUNT;
-		offsets[n++] = block;
-	} else if ((block -= INDIRCOUNT(sb)) < INDIRCOUNT(sb) * INDIRCOUNT(sb)) {
-		offsets[n++] = DIRCOUNT + 1;
-		offsets[n++] = block / INDIRCOUNT(sb);
-		offsets[n++] = block % INDIRCOUNT(sb);
-	} else {
-		block -= INDIRCOUNT(sb) * INDIRCOUNT(sb);
-		offsets[n++] = DIRCOUNT + 2;
-		offsets[n++] = (block / INDIRCOUNT(sb)) / INDIRCOUNT(sb);
-		offsets[n++] = (block / INDIRCOUNT(sb)) % INDIRCOUNT(sb);
-		offsets[n++] = block % INDIRCOUNT(sb);
-	}
+//	} else if ((block -= DIRCOUNT) < INDIRCOUNT(sb)) {
+//		offsets[n++] = DIRCOUNT;
+//		offsets[n++] = block;
+//	} else if ((block -= INDIRCOUNT(sb)) < INDIRCOUNT(sb) * INDIRCOUNT(sb)) {
+//		offsets[n++] = DIRCOUNT + 1;
+//		offsets[n++] = block / INDIRCOUNT(sb);
+//		offsets[n++] = block % INDIRCOUNT(sb);
+//	} else {
+//		block -= INDIRCOUNT(sb) * INDIRCOUNT(sb);
+//		offsets[n++] = DIRCOUNT + 2;
+//		offsets[n++] = (block / INDIRCOUNT(sb)) / INDIRCOUNT(sb);
+//		offsets[n++] = (block / INDIRCOUNT(sb)) % INDIRCOUNT(sb);
+//		offsets[n++] = block % INDIRCOUNT(sb);
+//	}
 	return n;
 }
 
