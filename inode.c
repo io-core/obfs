@@ -27,11 +27,11 @@ static DECLARE_COMPLETION(thread_done);
 
 struct task_struct *kthread;
 
-static int thread_func(void* data)
-{
-    printk("OBFS: In %s function\n", __func__);
-    return 0;
-}
+//static int thread_func(void* data)
+//{
+//    printk("OBFS: In %s function\n", __func__);
+//    return 0;
+//}
 
 
 static int obfs_write_inode(struct inode *inode, struct writeback_control *wbc);
@@ -546,8 +546,9 @@ MODULE_ALIAS_FS("obfs");
 
 static int __init init_obfs_fs(void)
 {
-        printk("OBFS Init\n");
 	int err = init_inodecache();
+        printk("OBFS Init\n");
+
 	if (err){
 	        printk("OBFS Inodecache Init Failure\n");
 		goto out1;

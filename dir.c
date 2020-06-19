@@ -183,7 +183,7 @@ ino_t obfs_find_entry(struct super_block * i_sb, ino_t i_ino, const char * vname
 
         int slot, namelen, m;
         char *nameptr;
-	struct inode * lowerdir;
+//	struct inode * lowerdir;
 
 	ino_t file_ino, lower, ret;
         struct buffer_head * bh;
