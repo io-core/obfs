@@ -12,6 +12,69 @@
 
 #include "obfs.h"
 
+
+static ssize_t
+obfs_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
+{
+        struct file *coda_file = iocb->ki_filp;
+        struct inode *coda_inode = file_inode(coda_file);
+        struct coda_file_info *cfi = coda_ftoc(coda_file);
+        loff_t ki_pos = iocb->ki_pos;
+        size_t count = iov_iter_count(to);
+        ssize_t ret;
+
+        ret = venus_access_intent(coda_inode->i_sb, coda_i2f(coda_inode),
+                                  &cfi->cfi_access_intent,
+                                  count, ki_pos, CODA_ACCESS_TYPE_READ);
+        if (ret)
+                goto finish_read;
+
+        ret = vfs_iter_read(cfi->cfi_container, to, &iocb->ki_pos, 0);
+
+finish_read:
+        venus_access_intent(coda_inode->i_sb, coda_i2f(coda_inode),
+                            &cfi->cfi_access_intent,
+                            count, ki_pos, CODA_ACCESS_TYPE_READ_FINISH);
+        return ret;
+}
+
+
+
+static ssize_t
+coda_file_write_iter(struct kiocb *iocb, struct iov_iter *to)
+{
+        struct file *coda_file = iocb->ki_filp;
+        struct inode *coda_inode = file_inode(coda_file);
+        struct coda_file_info *cfi = coda_ftoc(coda_file);
+        struct file *host_file = cfi->cfi_container;
+        loff_t ki_pos = iocb->ki_pos;
+        size_t count = iov_iter_count(to);
+        ssize_t ret;
+
+        ret = venus_access_intent(coda_inode->i_sb, coda_i2f(coda_inode),
+                                  &cfi->cfi_access_intent,
+                                  count, ki_pos, CODA_ACCESS_TYPE_WRITE);
+        if (ret)
+                goto finish_write;
+
+        file_start_write(host_file);
+        inode_lock(coda_inode);
+        ret = vfs_iter_write(cfi->cfi_container, to, &iocb->ki_pos, 0);
+        coda_inode->i_size = file_inode(host_file)->i_size;
+        coda_inode->i_blocks = (coda_inode->i_size + 511) >> 9;
+        coda_inode->i_mtime = coda_inode->i_ctime = current_time(coda_inode);
+        inode_unlock(coda_inode);
+        file_end_write(host_file);
+
+finish_write:
+        venus_access_intent(coda_inode->i_sb, coda_i2f(coda_inode),
+                            &cfi->cfi_access_intent,
+                            count, ki_pos, CODA_ACCESS_TYPE_WRITE_FINISH);
+        return ret;
+}
+
+
+
 /*
  * We have mostly NULLs here: the current defaults are OK for
  * the obfs filesystem.
