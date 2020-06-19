@@ -362,8 +362,8 @@ static struct inode *do_obfs_iget(struct inode *inode)
 {
 	struct buffer_head * bh;
 	struct obfs_dinode * raw_inode;
-//	struct obfs_inode_info *obfs_inode = obfs_i(inode);
-//	int i;
+	struct obfs_inode_info *obfs_inode = obfs_i(inode);
+	int i;
         uint32_t tv;
         time_t t_of_day;
 
@@ -381,6 +381,12 @@ static struct inode *do_obfs_iget(struct inode *inode)
           inode->i_mode = 0040777; //octal
         }else{
           inode->i_mode = 0100777; //octal
+	  for(i=0;i<OBFS_SECTABSIZE;i++){
+		obfs_inode->direct[i]=raw_inode->fhb.sec[i];
+	  }
+          for(i=0;i<OBFS_EXTABSIZE;i++){
+                obfs_inode->indirect[i]=raw_inode->fhb.ext[i];
+          }
         }
         tv = raw_inode->fhb.date;
         //                  year        month             day                 

@@ -170,7 +170,9 @@ struct inode *obfs_new_inode(const struct inode *dir, umode_t mode, int *error)
 	inode->i_ino = j;
 	inode->i_mtime = inode->i_atime = inode->i_ctime = current_time(inode);
 	inode->i_blocks = 0;
-	memset(&obfs_i(inode)->u, 0, sizeof(obfs_i(inode)->u));
+	memset(&obfs_i(inode)->direct, 0, sizeof(obfs_i(inode)->direct));
+	memset(&obfs_i(inode)->indirect, 0, sizeof(obfs_i(inode)->indirect));
+//	memset(&obfs_i(inode)->u, 0, sizeof(obfs_i(inode)->u));
 	insert_inode_hash(inode);
 	mark_inode_dirty(inode);
 

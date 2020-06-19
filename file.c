@@ -20,9 +20,9 @@ const struct file_operations obfs_file_operations = {
 	.llseek		= generic_file_llseek,
 	.read_iter	= generic_file_read_iter,
 	.write_iter	= generic_file_write_iter,
-	.mmap		= generic_file_mmap,
+//	.mmap		= generic_file_mmap,
 	.fsync		= generic_file_fsync,
-	.splice_read	= generic_file_splice_read,
+//	.splice_read	= generic_file_splice_read,
 };
 
 static int obfs_setattr(struct dentry *dentry, struct iattr *attr)

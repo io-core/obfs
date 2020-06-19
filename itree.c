@@ -17,16 +17,17 @@ static inline block_t cpu_to_block(unsigned long n)
 	return n;
 }
 
-static inline block_t *i_data(struct inode *inode)
-{
-	return (block_t *)obfs_i(inode)->u.i2_data;
-}
+//static inline block_t *i_data(struct inode *inode)
+//{
+//	return (block_t *)obfs_i(inode)->u.i2_data;
+//}
 
 //#define OBFS_SECTABSIZE 64
 //#define OBFS_EXTABSIZE 12
 //#define DIRCOUNT 7
 #define DIRCOUNT OBFS_SECTABSIZE
-#define INDIRCOUNT(sb) (1 << ((sb)->s_blocksize_bits - 2))
+//#define INDIRCOUNT(sb) (1 << ((sb)->s_blocksize_bits - 2))
+#define INDIRCOUNT OBFS_EXTABSIZE
 
 static int block_to_path(struct inode * inode, long block, int offsets[DEPTH])
 {
@@ -42,11 +43,12 @@ static int block_to_path(struct inode * inode, long block, int offsets[DEPTH])
 			printk("OBFS: block_to_path: "
 			       "block %ld too big on dev %pg\n",
 				block, sb->s_bdev);
-	} else {  //if (block < DIRCOUNT) {
+	} else if (block < DIRCOUNT) {
 		offsets[n++] = block;
-//	} else if ((block -= DIRCOUNT) < INDIRCOUNT(sb)) {
-//		offsets[n++] = DIRCOUNT;
-//		offsets[n++] = block;
+	} else { //if ((block -= DIRCOUNT) < INDIRCOUNT(sb)) {
+		block -= DIRCOUNT;
+		offsets[n++] = DIRCOUNT;
+		offsets[n++] = block;
 //	} else if ((block -= INDIRCOUNT(sb)) < INDIRCOUNT(sb) * INDIRCOUNT(sb)) {
 //		offsets[n++] = DIRCOUNT + 1;
 //		offsets[n++] = block / INDIRCOUNT(sb);
@@ -57,7 +59,7 @@ static int block_to_path(struct inode * inode, long block, int offsets[DEPTH])
 //		offsets[n++] = (block / INDIRCOUNT(sb)) / INDIRCOUNT(sb);
 //		offsets[n++] = (block / INDIRCOUNT(sb)) % INDIRCOUNT(sb);
 //		offsets[n++] = block % INDIRCOUNT(sb);
-//	}
+	}
 	return n;
 }
 
@@ -99,11 +101,11 @@ static inline Indirect *get_branch(struct inode *inode,
 
 	*err = 0;
 	/* i_data is not going away, no lock needed */
-	add_chain (chain, NULL, i_data(inode) + *offsets);
+//	add_chain (chain, NULL, i_data(inode) + *offsets);
 	if (!p->key)
 		goto no_block;
 	while (--depth) {
-		bh = sb_bread(sb, block_to_cpu(p->key));
+		bh = sb_bread(sb, (block_to_cpu(p->key)/29)-1);
 		if (!bh)
 			goto failure;
 		read_lock(&pointers_lock);
@@ -211,10 +213,23 @@ static int get_block(struct inode * inode, sector_t block,
 	Indirect chain[DEPTH];
 	Indirect *partial;
 	int left;
-	int depth = block_to_path(inode, block, offsets);
+	int depth = 1; //block_to_path(inode, block, offsets);
 
-	if (depth == 0)
-		goto out;
+	if (block > OBFS_SECTABSIZE){
+		depth=2;
+		if ((block - OBFS_SECTABSIZE) > (OBFS_EXTABSIZE * 256)){
+	        	printk("OBFS: get_block: sector %lld too large for inode %ld\n", block, inode->i_ino);
+			goto out;
+		}
+	}
+
+        printk("OBFS: get_block: block %lld attempted at sector %d\n",
+                block, obfs_i(inode)->direct[block]);
+
+	err=0;
+	map_bh(bh, inode->i_sb, (block_to_cpu(obfs_i(inode)->direct[block])/29)-1);//                              chain[depth-1].key));
+
+	goto out;
 
 reread:
 	partial = get_branch(inode, depth, offsets, chain, &err);
@@ -338,7 +353,7 @@ static void free_branches(struct inode *inode, block_t *p, block_t *q, int depth
 			if (!nr)
 				continue;
 			*p = 0;
-			bh = sb_bread(inode->i_sb, nr);
+			bh = sb_bread(inode->i_sb, (nr/29)-1);
 			if (!bh)
 				continue;
 			free_branches(inode, (block_t*)bh->b_data,
@@ -354,7 +369,7 @@ static void free_branches(struct inode *inode, block_t *p, block_t *q, int depth
 static inline void truncate (struct inode * inode)
 {
 	struct super_block *sb = inode->i_sb;
-	block_t *idata = i_data(inode);
+	block_t *idata = 0; //i_data(inode);
 	int offsets[DEPTH];
 	Indirect chain[DEPTH];
 	Indirect *partial;
