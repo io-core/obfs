@@ -16,6 +16,7 @@
 static ssize_t
 obfs_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
+/*
         struct file *coda_file = iocb->ki_filp;
         struct inode *coda_inode = file_inode(coda_file);
         struct coda_file_info *cfi = coda_ftoc(coda_file);
@@ -36,13 +37,16 @@ finish_read:
                             &cfi->cfi_access_intent,
                             count, ki_pos, CODA_ACCESS_TYPE_READ_FINISH);
         return ret;
+*/
+	return 0;
 }
 
 
 
 static ssize_t
-coda_file_write_iter(struct kiocb *iocb, struct iov_iter *to)
+obfs_file_write_iter(struct kiocb *iocb, struct iov_iter *to)
 {
+/*
         struct file *coda_file = iocb->ki_filp;
         struct inode *coda_inode = file_inode(coda_file);
         struct coda_file_info *cfi = coda_ftoc(coda_file);
@@ -71,6 +75,8 @@ finish_write:
                             &cfi->cfi_access_intent,
                             count, ki_pos, CODA_ACCESS_TYPE_WRITE_FINISH);
         return ret;
+*/
+	return 0;
 }
 
 
