@@ -16,6 +16,7 @@
 static ssize_t
 obfs_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
 {
+        printk("OBFS: in obfs_file_read_iter\n");
 /*
         struct file *coda_file = iocb->ki_filp;
         struct inode *coda_inode = file_inode(coda_file);
@@ -90,7 +91,7 @@ const struct file_operations obfs_file_operations = {
 	.read_iter	= obfs_file_read_iter,
 	.write_iter	= obfs_file_write_iter,
 //	.mmap		= generic_file_mmap,
-	.fsync		= generic_file_fsync,
+//	.fsync		= generic_file_fsync,
 //	.splice_read	= generic_file_splice_read,
 };
 
