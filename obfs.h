@@ -215,7 +215,7 @@ extern int obfs_prepare_chunk(struct page *page, loff_t pos, unsigned len);
 extern void V2_obfs_truncate(struct inode *);
 extern void obfs_truncate(struct inode *);
 extern void obfs_set_inode(struct inode *, dev_t);
-extern int V2_obfs_get_block(struct inode *, long, struct buffer_head *, int);
+extern int obfs_get_block(struct inode *, long, struct buffer_head *, int);
 extern unsigned V2_obfs_blocks(loff_t, struct super_block *);
 
 //extern struct obfs_dir_entry *obfs_find_entry(struct dentry*, struct page**);

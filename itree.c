@@ -227,7 +227,12 @@ static int get_block(struct inode * inode, sector_t block,
                 block, obfs_i(inode)->direct[block]);
 
 	err=0;
-	map_bh(bh, inode->i_sb, (block_to_cpu(obfs_i(inode)->direct[block])/29)-1);//                              chain[depth-1].key));
+//	map_bh(bh, inode->i_sb, (block_to_cpu(obfs_i(inode)->direct[block])/29)-1);//                              chain[depth-1].key));
+
+	set_buffer_mapped(bh);
+	bh->b_bdev = inode->i_sb->s_bdev;
+	bh->b_blocknr = (block_to_cpu(obfs_i(inode)->direct[block])/29)-1;
+	bh->b_size = inode->i_sb->s_blocksize;
 
 	goto out;
 
@@ -440,8 +445,7 @@ static inline unsigned nblocks(loff_t size, struct super_block *sb)
 }
 
 
-int V2_obfs_get_block(struct inode * inode, long block,
-			struct buffer_head *bh_result, int create)
+int obfs_get_block(struct inode * inode, long block, struct buffer_head *bh_result, int create)
 {
 	return get_block(inode, block, bh_result, create);
 }

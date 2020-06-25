@@ -272,26 +272,111 @@ static int obfs_statfs(struct dentry *dentry, struct kstatfs *buf)
 	return 0;
 }
 
-static int obfs_get_block(struct inode *inode, sector_t block,
+static int fn_obfs_get_block(struct inode *inode, sector_t block,
 		    struct buffer_head *bh_result, int create)
 {
 
-		return V2_obfs_get_block(inode, block, bh_result, create);
+		return obfs_get_block(inode, block, bh_result, create);
 }
 
 static int obfs_writepage(struct page *page, struct writeback_control *wbc)
 {
-	return block_write_full_page(page, obfs_get_block, wbc);
+	return block_write_full_page(page, fn_obfs_get_block, wbc);
 }
+
+//static int obfs_block_read_full_page(struct page *page, get_block_t *get_block)
+//{
+//	struct inode *inode = page->mapping->host;
+//	sector_t iblock, lblock;
+//	struct buffer_head *bh, *head, *arr[MAX_BUF_PER_PAGE];
+//	unsigned int blocksize, bbits;
+//	int nr, i;
+//	int fully_mapped = 1;
+//
+//	head = create_page_buffers(page, inode, 0);
+//	blocksize = head->b_size;
+//	bbits = block_size_bits(blocksize);
+//
+//	iblock = (sector_t)page->index << (PAGE_SHIFT - bbits);
+//	lblock = (i_size_read(inode)+blocksize-1) >> bbits;
+//	bh = head;
+//	nr = 0;
+//	i = 0;
+//
+//	do {
+//		if (buffer_uptodate(bh))
+//			continue;
+//
+//		if (!buffer_mapped(bh)) {
+//			int err = 0;
+//
+//			fully_mapped = 0;
+//			if (iblock < lblock) {
+//				WARN_ON(bh->b_size != blocksize);
+//				err = get_block(inode, iblock, bh, 0);
+//				if (err)
+//					SetPageError(page);
+//			}
+//			if (!buffer_mapped(bh)) {
+//				zero_user(page, i * blocksize, blocksize);
+//				if (!err)
+//					set_buffer_uptodate(bh);
+//				continue;
+//			}
+//			/*
+//			 * get_block() might have updated the buffer
+//			 * synchronously
+//			 */
+//			if (buffer_uptodate(bh))
+//				continue;
+//		}
+//		arr[nr++] = bh;
+//	} while (i++, iblock++, (bh = bh->b_this_page) != head);
+//
+//	if (fully_mapped)
+//		SetPageMappedToDisk(page);
+//
+//	if (!nr) {
+//		/*
+//		 * All buffers are uptodate - we can set the page uptodate
+//		 * as well. But not if get_block() returned an error.
+//		 */
+//		if (!PageError(page))
+//			SetPageUptodate(page);
+//		unlock_page(page);
+//		return 0;
+//	}
+//
+//	/* Stage two: lock the buffers */
+//	for (i = 0; i < nr; i++) {
+//		bh = arr[i];
+//		lock_buffer(bh);
+//		mark_buffer_async_read(bh);
+//	}
+//
+//	/*
+//	 * Stage 3: start the IO.  Check for uptodateness
+//	 * inside the buffer lock in case another process reading
+//	 * the underlying blockdev brought it uptodate (the sct fix).
+//	 */
+//	for (i = 0; i < nr; i++) {
+//		bh = arr[i];
+//		if (buffer_uptodate(bh))
+//			end_buffer_async_read(bh, 1);
+//		else
+//			submit_bh(REQ_OP_READ, 0, bh);
+//	}
+//	return 0;
+//}
 
 static int obfs_readpage(struct file *file, struct page *page)
 {
-	return block_read_full_page(page,obfs_get_block);
+	return block_read_full_page(page,fn_obfs_get_block);
 }
 
 int obfs_prepare_chunk(struct page *page, loff_t pos, unsigned len)
 {
-	return __block_write_begin(page, pos, len, obfs_get_block);
+	return __block_write_begin(page, pos, len, fn_obfs_get_block);
 }
 
 static void obfs_write_failed(struct address_space *mapping, loff_t to)
@@ -311,7 +396,7 @@ static int obfs_write_begin(struct file *file, struct address_space *mapping,
 	int ret;
 
 	ret = block_write_begin(mapping, pos, len, flags, pagep,
-				obfs_get_block);
+				fn_obfs_get_block);
 	if (unlikely(ret))
 		obfs_write_failed(mapping, pos + len);
 
@@ -320,7 +405,7 @@ static int obfs_write_begin(struct file *file, struct address_space *mapping,
 
 static sector_t obfs_bmap(struct address_space *mapping, sector_t block)
 {
-	return generic_block_bmap(mapping,block,obfs_get_block);
+	return generic_block_bmap(mapping,block,fn_obfs_get_block);
 }
 
 static const struct address_space_operations obfs_aops = {
@@ -341,15 +426,15 @@ void obfs_set_inode(struct inode *inode, dev_t rdev)
 	if (S_ISREG(inode->i_mode)) {
 		inode->i_op = &obfs_file_inode_operations;
 		inode->i_fop = &obfs_file_operations;
-		inode->i_mapping->a_ops = &obfs_aops;
+//		inode->i_mapping->a_ops = &obfs_aops;
 	} else if (S_ISDIR(inode->i_mode)) {
 		inode->i_op = &obfs_dir_inode_operations;
 		inode->i_fop = &obfs_dir_operations;
-		inode->i_mapping->a_ops = &obfs_aops;
+//		inode->i_mapping->a_ops = &obfs_aops;
 	} else if (S_ISLNK(inode->i_mode)) {
 		inode->i_op = &obfs_symlink_inode_operations;
 		inode_nohighmem(inode);
-		inode->i_mapping->a_ops = &obfs_aops;
+//		inode->i_mapping->a_ops = &obfs_aops;
 	} else
 		init_special_inode(inode, inode->i_mode, rdev);
 }
