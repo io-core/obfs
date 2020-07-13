@@ -284,94 +284,196 @@ static int obfs_writepage(struct page *page, struct writeback_control *wbc)
 	return block_write_full_page(page, fn_obfs_get_block, wbc);
 }
 
-//static int obfs_block_read_full_page(struct page *page, get_block_t *get_block)
-//{
-//	struct inode *inode = page->mapping->host;
-//	sector_t iblock, lblock;
-//	struct buffer_head *bh, *head, *arr[MAX_BUF_PER_PAGE];
-//	unsigned int blocksize, bbits;
-//	int nr, i;
-//	int fully_mapped = 1;
+static struct buffer_head *create_page_buffers(struct page *page, struct inode *inode, unsigned int b_state)
+{
+	BUG_ON(!PageLocked(page));
+
+	if (!page_has_buffers(page))
+		create_empty_buffers(page, 1 << READ_ONCE(inode->i_blkbits),
+				     b_state);
+	return page_buffers(page);
+}
+
+static inline int block_size_bits(unsigned int blocksize)
+{
+	return ilog2(blocksize);
+}
+
+static void buffer_io_error(struct buffer_head *bh, char *msg)
+{
+	if (!test_bit(BH_Quiet, &bh->b_state))
+		printk_ratelimited(KERN_ERR
+			"Buffer I/O error on dev %pg, logical block %llu%s\n",
+			bh->b_bdev, (unsigned long long)bh->b_blocknr, msg);
+}
+
+static void end_buffer_async_read(struct buffer_head *bh, int uptodate)
+{
+	unsigned long flags;
+	struct buffer_head *first;
+	struct buffer_head *tmp;
+	struct page *page;
+	int page_uptodate = 1;
+
+	BUG_ON(!buffer_async_read(bh));
+
+	page = bh->b_page;
+	if (uptodate) {
+		set_buffer_uptodate(bh);
+	} else {
+		clear_buffer_uptodate(bh);
+		buffer_io_error(bh, ", async page read");
+		SetPageError(page);
+	}
+
+	/*
+	 * Be _very_ careful from here on. Bad things can happen if
+	 * two buffer heads end IO at almost the same time and both
+	 * decide that the page is now completely done.
+	 */
+	first = page_buffers(page);
+//	spin_lock_irqsave(&first->b_uptodate_lock, flags);
+	clear_buffer_async_read(bh);
+	unlock_buffer(bh);
+	tmp = bh;
+	do {
+		if (!buffer_uptodate(tmp))
+			page_uptodate = 0;
+		if (buffer_async_read(tmp)) {
+			BUG_ON(!buffer_locked(tmp));
+			goto still_busy;
+		}
+		tmp = tmp->b_this_page;
+	} while (tmp != bh);
+//	spin_unlock_irqrestore(&first->b_uptodate_lock, flags);
+
+	/*
+	 * If none of the buffers had errors and they are all
+	 * uptodate then we can set the page uptodate.
+	 */
+	if (page_uptodate && !PageError(page))
+		SetPageUptodate(page);
+	unlock_page(page);
+	return;
+
+still_busy:
+//	spin_unlock_irqrestore(&first->b_uptodate_lock, flags);
+	return;
+}
+
+static void end_buffer_async_read_io(struct buffer_head *bh, int uptodate)
+{
+	/* Decrypt if needed */
+//	if (uptodate && IS_ENABLED(CONFIG_FS_ENCRYPTION) &&
+//	    IS_ENCRYPTED(bh->b_page->mapping->host) &&
+//	    S_ISREG(bh->b_page->mapping->host->i_mode)) {
+//		struct decrypt_bh_ctx *ctx = kmalloc(sizeof(*ctx), GFP_ATOMIC);
 //
-//	head = create_page_buffers(page, inode, 0);
-//	blocksize = head->b_size;
-//	bbits = block_size_bits(blocksize);
-//
-//	iblock = (sector_t)page->index << (PAGE_SHIFT - bbits);
-//	lblock = (i_size_read(inode)+blocksize-1) >> bbits;
-//	bh = head;
-//	nr = 0;
-//	i = 0;
-//
-//	do {
-//		if (buffer_uptodate(bh))
-//			continue;
-//
-//		if (!buffer_mapped(bh)) {
-//			int err = 0;
-//
-//			fully_mapped = 0;
-//			if (iblock < lblock) {
-//				WARN_ON(bh->b_size != blocksize);
-//				err = get_block(inode, iblock, bh, 0);
-//				if (err)
-//					SetPageError(page);
-//			}
-//			if (!buffer_mapped(bh)) {
-//				zero_user(page, i * blocksize, blocksize);
-//				if (!err)
-//					set_buffer_uptodate(bh);
-//				continue;
-//			}
-//			/*
-//			 * get_block() might have updated the buffer
-//			 * synchronously
-//			 */
-//			if (buffer_uptodate(bh))
-//				continue;
+//		if (ctx) {
+//			INIT_WORK(&ctx->work, decrypt_bh);
+//			ctx->bh = bh;
+//			fscrypt_enqueue_decrypt_work(&ctx->work);
+//			return;
 //		}
-//		arr[nr++] = bh;
-//	} while (i++, iblock++, (bh = bh->b_this_page) != head);
-//
-//	if (fully_mapped)
-//		SetPageMappedToDisk(page);
-//
-//	if (!nr) {
-//		/*
-//		 * All buffers are uptodate - we can set the page uptodate
-//		 * as well. But not if get_block() returned an error.
-//		 */
-//		if (!PageError(page))
-//			SetPageUptodate(page);
-//		unlock_page(page);
-//		return 0;
+//		uptodate = 0;
 //	}
-//
-//	/* Stage two: lock the buffers */
-//	for (i = 0; i < nr; i++) {
-//		bh = arr[i];
-//		lock_buffer(bh);
-//		mark_buffer_async_read(bh);
-//	}
-//
-//	/*
-//	 * Stage 3: start the IO.  Check for uptodateness
-//	 * inside the buffer lock in case another process reading
-//	 * the underlying blockdev brought it uptodate (the sct fix).
-//	 */
-//	for (i = 0; i < nr; i++) {
-//		bh = arr[i];
-//		if (buffer_uptodate(bh))
-//			end_buffer_async_read(bh, 1);
-//		else
-//			submit_bh(REQ_OP_READ, 0, bh);
-//	}
-//	return 0;
-//}
+	end_buffer_async_read(bh, uptodate);
+}
+
+static void mark_buffer_async_read(struct buffer_head *bh)
+{
+	bh->b_end_io = end_buffer_async_read_io;
+	set_buffer_async_read(bh);
+}
+
+static int obfs_block_read_full_page(struct page *page, get_block_t *get_block)
+{
+	struct inode *inode = page->mapping->host;
+	sector_t iblock, lblock;
+	struct buffer_head *bh, *head, *arr[MAX_BUF_PER_PAGE];
+	unsigned int blocksize, bbits;
+	int nr, i;
+	int fully_mapped = 1;
+
+	head = create_page_buffers(page, inode, 0);
+	blocksize = head->b_size;
+	bbits = block_size_bits(blocksize);
+
+	iblock = (sector_t)page->index << (PAGE_SHIFT - bbits);
+	lblock = (i_size_read(inode)+blocksize-1) >> bbits;
+	bh = head;
+	nr = 0;
+	i = 0;
+
+	do {
+		if (buffer_uptodate(bh))
+			continue;
+
+		if (!buffer_mapped(bh)) {
+			int err = 0;
+
+			fully_mapped = 0;
+			if (iblock < lblock) {
+				WARN_ON(bh->b_size != blocksize);
+				err = get_block(inode, iblock, bh, 0);
+				if (err)
+					SetPageError(page);
+			}
+			if (!buffer_mapped(bh)) {
+				zero_user(page, i * blocksize, blocksize);
+				if (!err)
+					set_buffer_uptodate(bh);
+				continue;
+			}
+			/*
+			 * get_block() might have updated the buffer
+			 * synchronously
+			 */
+			if (buffer_uptodate(bh))
+				continue;
+		}
+		arr[nr++] = bh;
+	} while (i++, iblock++, (bh = bh->b_this_page) != head);
+
+	if (fully_mapped)
+		SetPageMappedToDisk(page);
+
+	if (!nr) {
+		/*
+		 * All buffers are uptodate - we can set the page uptodate
+		 * as well. But not if get_block() returned an error.
+		 */
+		if (!PageError(page))
+			SetPageUptodate(page);
+		unlock_page(page);
+		return 0;
+	}
+
+	/* Stage two: lock the buffers */
+	for (i = 0; i < nr; i++) {
+		bh = arr[i];
+		lock_buffer(bh);
+		mark_buffer_async_read(bh);
+	}
+
+	/*
+	 * Stage 3: start the IO.  Check for uptodateness
+	 * inside the buffer lock in case another process reading
+	 * the underlying blockdev brought it uptodate (the sct fix).
+	 */
+	for (i = 0; i < nr; i++) {
+		bh = arr[i];
+		if (buffer_uptodate(bh))
+			end_buffer_async_read(bh, 1);
+		else
+			submit_bh(REQ_OP_READ, 0, bh);
+	}
+	return 0;
+}
 
 static int obfs_readpage(struct file *file, struct page *page)
 {
-	return block_read_full_page(page,fn_obfs_get_block);
+	return obfs_block_read_full_page(page,fn_obfs_get_block);
 }
 
 int obfs_prepare_chunk(struct page *page, loff_t pos, unsigned len)

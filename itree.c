@@ -205,8 +205,7 @@ changed:
 	return -EAGAIN;
 }
 
-static int get_block(struct inode * inode, sector_t block,
-			struct buffer_head *bh, int create)
+static int get_block(struct inode * inode, sector_t block, struct buffer_head *bh, int create)
 {
 	int err = -EIO;
 	int offsets[DEPTH];
@@ -214,24 +213,25 @@ static int get_block(struct inode * inode, sector_t block,
 	Indirect *partial;
 	int left;
 	int depth = 1; //block_to_path(inode, block, offsets);
+	sector_t block2 = block + 1;
 
-	if (block > OBFS_SECTABSIZE){
+	if (block2 > OBFS_SECTABSIZE){
 		depth=2;
-		if ((block - OBFS_SECTABSIZE) > (OBFS_EXTABSIZE * 256)){
+		if ((block2 - OBFS_SECTABSIZE) > (OBFS_EXTABSIZE * 256)){
 	        	printk("OBFS: get_block: sector %lld too large for inode %ld\n", block, inode->i_ino);
 			goto out;
 		}
 	}
 
         printk("OBFS: get_block: block %lld attempted at sector %d\n",
-                block, obfs_i(inode)->direct[block]);
+                block, obfs_i(inode)->direct[block2]);
 
 	err=0;
 //	map_bh(bh, inode->i_sb, (block_to_cpu(obfs_i(inode)->direct[block])/29)-1);//                              chain[depth-1].key));
 
 	set_buffer_mapped(bh);
 	bh->b_bdev = inode->i_sb->s_bdev;
-	bh->b_blocknr = (block_to_cpu(obfs_i(inode)->direct[block])/29)-1;
+	bh->b_blocknr = (block_to_cpu(obfs_i(inode)->direct[block2])/29)-1;
 	bh->b_size = inode->i_sb->s_blocksize;
 
 	goto out;
