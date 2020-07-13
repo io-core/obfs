@@ -386,7 +386,7 @@ static void mark_buffer_async_read(struct buffer_head *bh)
 	set_buffer_async_read(bh);
 }
 
-static int obfs_block_read_full_page(struct page *page, get_block_t *get_block)
+static int obfs_block_read_full_page(struct page *page, get_block_t * fn_get_block)
 {
 	struct inode *inode = page->mapping->host;
 	sector_t iblock, lblock;
@@ -415,7 +415,7 @@ static int obfs_block_read_full_page(struct page *page, get_block_t *get_block)
 			fully_mapped = 0;
 			if (iblock < lblock) {
 				WARN_ON(bh->b_size != blocksize);
-				err = get_block(inode, iblock, bh, 0);
+				err = fn_get_block(inode, iblock, bh, 0);
 				if (err)
 					SetPageError(page);
 			}
@@ -426,7 +426,7 @@ static int obfs_block_read_full_page(struct page *page, get_block_t *get_block)
 				continue;
 			}
 			/*
-			 * get_block() might have updated the buffer
+			 * fn_get_block() might have updated the buffer
 			 * synchronously
 			 */
 			if (buffer_uptodate(bh))
@@ -441,7 +441,7 @@ static int obfs_block_read_full_page(struct page *page, get_block_t *get_block)
 	if (!nr) {
 		/*
 		 * All buffers are uptodate - we can set the page uptodate
-		 * as well. But not if get_block() returned an error.
+		 * as well. But not if fn_get_block() returned an error.
 		 */
 		if (!PageError(page))
 			SetPageUptodate(page);
